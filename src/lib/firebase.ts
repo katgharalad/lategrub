@@ -50,16 +50,16 @@ export interface Order {
   customerId: string;
   deliveryPersonId: string | null;
   status: OrderStatus;
-  items?: {
+  items: {
     id: string;
     name: string;
     quantity: number;
     price: number;
   }[];
-  total?: number;
-  deliveryAddress?: string;
-  paymentMethod?: 'cash' | 'barter';
-  paymentDetails?: string;
+  total: number;
+  deliveryAddress: string;
+  paymentMethod: 'cash' | 'barter';
+  paymentDetails: string;
   createdAt: any; // Using any for serverTimestamp
 }
 

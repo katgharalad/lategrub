@@ -72,17 +72,25 @@ const Profile: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    if (!user) {
+      setError('You must be logged in to update your profile');
+      return;
+    }
 
-    setError(null);
-    setSuccess(null);
     setLoading(true);
+    setError(null);
 
     try {
-      await updateDoc(doc(db, 'users', user.uid), profile);
+      const userDocRef = doc(db, 'users', user.uid);
+      const profileData = {
+        ...profile,
+        updatedAt: new Date()
+      };
+
+      await updateDoc(userDocRef, profileData);
       setSuccess('Profile updated successfully!');
-      setIsEditing(false);
     } catch (err) {
+      console.error('Error updating profile:', err);
       setError('Failed to update profile. Please try again.');
     } finally {
       setLoading(false);

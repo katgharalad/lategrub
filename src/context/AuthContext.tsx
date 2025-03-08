@@ -5,9 +5,10 @@ import {
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
-  updateProfile
+  updateProfile,
+  sendEmailVerification
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, addDoc, query, where, getDocs, deleteDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 
 interface AuthContextType {
@@ -17,6 +18,8 @@ interface AuthContextType {
   signup: (email: string, password: string, name: string, role: string, photoURL?: string) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  verifyEmailCode: (email: string, code: string) => Promise<boolean>;
+  sendVerificationCode: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -27,6 +30,10 @@ export const useAuth = () => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
+};
+
+const generateVerificationCode = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -64,7 +71,70 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return unsubscribe;
   }, []);
 
+  const sendVerificationCode = async (email: string) => {
+    if (!email.toLowerCase().endsWith('@owu.edu')) {
+      throw new Error('Only @owu.edu email addresses are allowed to register');
+    }
+
+    // Check if email is already registered
+    const usersRef = collection(db, 'users');
+    const q = query(usersRef, where('email', '==', email.toLowerCase()));
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+      throw new Error('This email is already registered');
+    }
+
+    // Generate and store verification code
+    const code = generateVerificationCode();
+    const verificationRef = collection(db, 'email_verifications');
+    
+    // Delete any existing verification codes for this email
+    const existingCodes = await getDocs(query(verificationRef, where('email', '==', email.toLowerCase())));
+    for (const doc of existingCodes.docs) {
+      await deleteDoc(doc.ref);
+    }
+
+    // Store new verification code
+    await addDoc(verificationRef, {
+      email: email.toLowerCase(),
+      code,
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 30 * 60 * 1000) // 30 minutes expiration
+    });
+
+    // In a real application, you would send this code via email
+    // For development, we'll log it to console
+    console.log('Verification code for', email, ':', code);
+  };
+
+  const verifyEmailCode = async (email: string, code: string) => {
+    const verificationRef = collection(db, 'email_verifications');
+    const q = query(
+      verificationRef,
+      where('email', '==', email.toLowerCase()),
+      where('code', '==', code)
+    );
+
+    const querySnapshot = await getDocs(q);
+    if (querySnapshot.empty) {
+      return false;
+    }
+
+    const verification = querySnapshot.docs[0].data();
+    if (new Date() > verification.expiresAt.toDate()) {
+      await deleteDoc(querySnapshot.docs[0].ref);
+      return false;
+    }
+
+    await deleteDoc(querySnapshot.docs[0].ref);
+    return true;
+  };
+
   const signup = async (email: string, password: string, name: string, role: string, photoURL?: string) => {
+    if (!email.toLowerCase().endsWith('@owu.edu')) {
+      throw new Error('Only @owu.edu email addresses are allowed to register');
+    }
+
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
@@ -74,10 +144,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ...(photoURL && { photoURL })
       });
 
+      // Send email verification
+      await sendEmailVerification(userCredential.user);
+
       // Create user document in Firestore
       await setDoc(doc(db, 'users', userCredential.user.uid), {
         name,
-        email,
+        email: email.toLowerCase(),
         role,
         uid: userCredential.user.uid,
         ...(photoURL && { photoURL })
@@ -118,7 +191,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loading,
     signup,
     login,
-    logout
+    logout,
+    verifyEmailCode,
+    sendVerificationCode
   };
 
   return (

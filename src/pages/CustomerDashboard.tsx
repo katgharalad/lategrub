@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import PageLayout from '../components/PageLayout';
 import AvailableItems from '../components/AvailableItems';
 import { useAuth } from '../context/AuthContext';
-import { collection, query, where, onSnapshot, orderBy, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Order, OrderStatus } from '../lib/firebase';
 import { format } from 'date-fns';
@@ -84,12 +84,6 @@ const CustomerDashboard: React.FC = () => {
   };
 
   const activeOrders = orders.filter(order => order.status !== 'delivered');
-
-  // Add this function to get order number
-  const getOrderNumber = (order: Order) => {
-    const orderIndex = orders.findIndex(o => o.id === order.id);
-    return orderIndex + 1;
-  };
 
   const formatOrderTime = (date: Date) => {
     return format(date, 'MMM d, h:mm a');

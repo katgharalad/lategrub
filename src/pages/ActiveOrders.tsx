@@ -3,7 +3,7 @@ import PageLayout from '../components/PageLayout';
 import { useAuth } from '../context/AuthContext';
 import { collection, query, where, onSnapshot, orderBy, Timestamp, doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { Order, OrderStatus, UserRole } from '../lib/firebase';
+import { Order, OrderStatus } from '../lib/firebase';
 
 const ActiveOrders: React.FC = () => {
   const { user } = useAuth();
@@ -129,7 +129,7 @@ const ActiveOrders: React.FC = () => {
   console.log('Current orders state:', orders);
 
   return (
-    <PageLayout title="Active Orders">
+    <PageLayout>
       <div className="space-y-6">
         {error && (
           <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">

@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import PageLayout from '../components/PageLayout';
 import { useAuth } from '../context/AuthContext';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { createOrder } from '../lib/firebase';
+import { createOrder, OrderStatus } from '../lib/firebase';
 
 interface MenuItem {
   id: string;
@@ -40,31 +40,94 @@ const menuItems: MenuItem[] = [
 
 interface OrderItem {
   id: string;
+  name: string;
+  price: number;
   quantity: number;
 }
 
 interface Location {
   id: string;
   name: string;
-  roomNumber: string;
+  lat: number;
+  lng: number;
+  address: string;
 }
 
-interface Order {
-  customerId: string;
-  deliveryPersonId: string | null;
-  status: 'ordered' | 'waiting' | 'got_food' | 'walking' | 'delivered';
-  createdAt: Date;
-  items: {
-    id: string;
-    name: string;
-    quantity: number;
-    price: number;
-  }[];
-  total: number;
-  deliveryAddress: string;
-  paymentMethod: 'cash' | 'barter';
-  paymentDetails: string;
-}
+const locations: Location[] = [
+  {
+    id: 'l1',
+    name: 'Building A',
+    lat: 40.7128,
+    lng: -74.0060,
+    address: '123 Main St'
+  },
+  {
+    id: 'l2',
+    name: 'Building B',
+    lat: 40.7129,
+    lng: -74.0061,
+    address: '456 Oak Ave'
+  },
+  {
+    id: 'l3',
+    name: 'Building C',
+    lat: 40.7130,
+    lng: -74.0062,
+    address: '789 Pine Rd'
+  },
+  {
+    id: 'l4',
+    name: 'Building D',
+    lat: 40.7131,
+    lng: -74.0063,
+    address: '321 Elm St'
+  },
+  {
+    id: 'l5',
+    name: 'Building E',
+    lat: 40.7132,
+    lng: -74.0064,
+    address: '654 Maple Dr'
+  }
+];
+
+const commonLocations: Location[] = [
+  { 
+    id: 'hayes',
+    name: 'Hayes',
+    lat: 40.7128,
+    lng: -74.0060,
+    address: 'Hayes Hall'
+  },
+  {
+    id: 'welch',
+    name: 'Welch',
+    lat: 40.7129,
+    lng: -74.0061,
+    address: 'Welch Hall'
+  },
+  {
+    id: 'smith',
+    name: 'Smith',
+    lat: 40.7130,
+    lng: -74.0062,
+    address: 'Smith Hall'
+  },
+  {
+    id: 'frat',
+    name: 'Frat House',
+    lat: 40.7131,
+    lng: -74.0063,
+    address: 'Frat House'
+  },
+  {
+    id: 'stuy',
+    name: 'Stuyvesant',
+    lat: 40.7132,
+    lng: -74.0064,
+    address: 'Stuyvesant Hall'
+  }
+];
 
 const PlaceOrder: React.FC = () => {
   const navigate = useNavigate();
@@ -78,14 +141,6 @@ const PlaceOrder: React.FC = () => {
   const [showPaymentInput, setShowPaymentInput] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const commonLocations: Location[] = [
-    { id: 'hayes', name: 'Hayes', roomNumber: '' },
-    { id: 'welch', name: 'Welch', roomNumber: '' },
-    { id: 'smith', name: 'Smith', roomNumber: '' },
-    { id: 'frat', name: 'Frat House', roomNumber: '' },
-    { id: 'stuy', name: 'Stuyvesant', roomNumber: '' }
-  ];
 
   const handleLocationSelect = (location: Location) => {
     setSelectedLocation(location);
@@ -110,7 +165,14 @@ const PlaceOrder: React.FC = () => {
             : item
         );
       }
-      return [...prev, { id: itemId, quantity: 1 }];
+      const menuItem = menuItems.find(item => item.id === itemId);
+      if (!menuItem) return prev;
+      return [...prev, { 
+        id: menuItem.id,
+        name: menuItem.name,
+        price: menuItem.price,
+        quantity: 1 
+      }];
     });
   };
 

@@ -46,7 +46,7 @@ const EnergyFlow: React.FC<EnergyFlowProps> = ({ data, title = 'ORDER FLOW', cla
         {/* Input Flow */}
         <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1/3">
           <div className="space-y-4">
-            {data.input.sources.map((source, index) => (
+            {data.input.sources.map((source) => (
               <div
                 key={source.name}
                 className={`h-12 rounded-l-lg relative overflow-hidden transition-all duration-500 ${
@@ -109,7 +109,7 @@ const EnergyFlow: React.FC<EnergyFlowProps> = ({ data, title = 'ORDER FLOW', cla
         {/* Output Flow */}
         <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1/3">
           <div className="space-y-4">
-            {data.output.destinations.map((dest, index) => (
+            {data.output.destinations.map((dest) => (
               <div
                 key={dest.name}
                 className={`h-12 rounded-r-lg relative overflow-hidden transition-all duration-500 ${

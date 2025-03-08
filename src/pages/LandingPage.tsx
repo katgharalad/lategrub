@@ -1,4 +1,3 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Utensils } from 'lucide-react';
 import PageLayout from '../components/PageLayout';

@@ -6,12 +6,14 @@ interface PageLayoutProps {
   children: React.ReactNode;
   showNav?: boolean;
   className?: string;
+  title?: string;
 }
 
 const PageLayout: React.FC<PageLayoutProps> = ({ 
   children, 
   showNav = true,
-  className = ''
+  className = '',
+  title
 }) => {
   const location = useLocation();
   const isAuthPage = ['/login', '/signup'].includes(location.pathname);
@@ -25,9 +27,15 @@ const PageLayout: React.FC<PageLayoutProps> = ({
             <header className="py-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <span className="font-display text-2xl font-bold bg-gradient-to-r from-primary-light to-primary bg-clip-text text-transparent">
-                    LateGrub
-                  </span>
+                  {title ? (
+                    <h1 className="font-display text-2xl font-bold bg-gradient-to-r from-primary-light to-primary bg-clip-text text-transparent">
+                      {title}
+                    </h1>
+                  ) : (
+                    <span className="font-display text-2xl font-bold bg-gradient-to-r from-primary-light to-primary bg-clip-text text-transparent">
+                      LateGrub
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center space-x-4">
                   <div className="w-10 h-10 rounded-full bg-background-card flex items-center justify-center">

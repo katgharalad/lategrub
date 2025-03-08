@@ -3,11 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import PageLayout from '../components/PageLayout';
 import BottomNav from '../components/BottomNav';
 import { useAuth } from '../context/AuthContext';
-import { collection, query, where, onSnapshot, doc, updateDoc, getDoc, orderBy } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Order } from '../lib/firebase';
-import { format } from 'date-fns';
-import Avatar from '../components/Avatar';
 
 interface DeliveryOrder extends Order {
   id: string;
@@ -26,6 +24,16 @@ interface DeliveryOrder extends Order {
 interface UnreadCounts {
   [orderId: string]: number;
 }
+
+const formatOrderTime = (date: Date) => {
+  return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+    hour12: true
+  });
+};
 
 const DeliveryDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -251,10 +259,6 @@ const DeliveryDashboard: React.FC = () => {
     }
   };
 
-  const formatOrderTime = (date: Date) => {
-    return format(date, 'MMM d, h:mm a');
-  };
-
   if (authLoading || loading) {
     return (
       <PageLayout>
@@ -335,7 +339,7 @@ const DeliveryDashboard: React.FC = () => {
             <h2 className="text-lg font-bold">
               {activeTab === 'available' ? 'Available Orders' : 
                activeTab === 'accepted' ? 'Accepted Orders' : 'Delivery History'}
-          </h2>
+            </h2>
             <div className="flex items-center space-x-2">
               <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
               <span className="text-sm text-text-secondary">Live Updates</span>
@@ -354,8 +358,11 @@ const DeliveryDashboard: React.FC = () => {
                   >
                     <div className="flex items-center justify-between mb-3">
                       <div>
-                        <h3 className="font-medium">{order.restaurant?.name || 'Unknown Restaurant'}</h3>
-                        <p className="text-sm text-text-secondary">{order.restaurant?.address || 'Address not available'}</p>
+                        <h3 className="font-medium">{order.customer.name}</h3>
+                        <p className="text-sm text-text-secondary">{order.customer.address}</p>
+                        <p className="text-xs text-text-secondary mt-1">
+                          Ordered {formatOrderTime(order.createdAt)}
+                        </p>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
@@ -378,10 +385,23 @@ const DeliveryDashboard: React.FC = () => {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between text-sm text-text-secondary mb-4">
-                      <span>{order.items.length} items</span>
-                      <span>{order.deliveryAddress}</span>
-                      <span>${order.total.toFixed(2)}</span>
+                    {/* Order Items */}
+                    <div className="bg-background-DEFAULT rounded-lg p-3 mb-4">
+                      <h4 className="text-sm font-medium mb-2">Order Items:</h4>
+                      <div className="space-y-2">
+                        {order.items.map((item, index) => (
+                          <div key={index} className="flex justify-between text-sm">
+                            <span>{item.quantity}x {item.name}</span>
+                            <span>${(item.price * item.quantity).toFixed(2)}</span>
+                          </div>
+                        ))}
+                        <div className="border-t border-background-dark pt-2 mt-2">
+                          <div className="flex justify-between text-sm font-medium">
+                            <span>Total</span>
+                            <span>${order.total.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="space-y-2">
@@ -446,27 +466,43 @@ const DeliveryDashboard: React.FC = () => {
                   >
                     <div className="flex items-center justify-between mb-3">
                       <div>
-                        <h3 className="font-medium">{order.restaurant?.name || 'Unknown Restaurant'}</h3>
-                        <p className="text-sm text-text-secondary">{order.restaurant?.address || 'Address not available'}</p>
+                        <h3 className="font-medium">{order.customer.name}</h3>
+                        <p className="text-sm text-text-secondary">{order.customer.address}</p>
+                        <p className="text-xs text-text-secondary mt-1">
+                          Ordered {formatOrderTime(order.createdAt)}
+                        </p>
                       </div>
                       <div className="px-3 py-1 rounded-full text-sm font-medium bg-yellow-500">
                         AVAILABLE
                       </div>
-                </div>
+                    </div>
 
-                    <div className="flex items-center justify-between text-sm text-text-secondary mb-4">
-                      <span>{order.items.length} items</span>
-                      <span>{order.deliveryAddress}</span>
-                      <span>${order.total.toFixed(2)}</span>
-                </div>
+                    {/* Order Items */}
+                    <div className="bg-background-DEFAULT rounded-lg p-3 mb-4">
+                      <h4 className="text-sm font-medium mb-2">Order Items:</h4>
+                      <div className="space-y-2">
+                        {order.items.map((item, index) => (
+                          <div key={index} className="flex justify-between text-sm">
+                            <span>{item.quantity}x {item.name}</span>
+                            <span>${(item.price * item.quantity).toFixed(2)}</span>
+                          </div>
+                        ))}
+                        <div className="border-t border-background-dark pt-2 mt-2">
+                          <div className="flex justify-between text-sm font-medium">
+                            <span>Total</span>
+                            <span>${order.total.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
-                <button
+                    <button
                       onClick={() => handleAcceptOrder(order.id)}
                       className="w-full bg-primary text-white py-2 rounded-xl hover:bg-primary-dark transition-colors"
-                >
+                    >
                       Accept Order
-                </button>
-              </div>
+                    </button>
+                  </div>
                 ))
               )
             ) : null}
