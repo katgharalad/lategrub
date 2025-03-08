@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { Utensils } from 'lucide-react';
 import PageLayout from '../components/PageLayout';
 import { useAuth } from '../context/AuthContext';
+import BoomMeter from '../components/BoomMeter';
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -27,15 +28,12 @@ export default function LandingPage() {
 
   return (
     <PageLayout showNav={false}>
-
       {/* Main rotating diamond frame */}
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="w-[90vh] aspect-square border-[1px] border-primary/30 transform rotate-45 animate-[spin_20s_linear_infinite]" />
       </div>
 
-    
       <div className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden">
-    
         {/* Floating decorative elements */}
         <div className="absolute inset-0">
           <div className="absolute top-10 right-[15%] w-20 h-32 bg-gradient-to-b from-primary to-primary-light rounded-lg opacity-30 blur-sm animate-[float_4s_ease-in-out_infinite]" />
@@ -75,6 +73,11 @@ export default function LandingPage() {
             >
               {user ? 'Switch to Delivery Mode' : 'I Want to Deliver'}
             </button>
+          </div>
+
+          {/* Rating Section */}
+          <div className="mt-12 bg-background-card/50 backdrop-blur-md rounded-xl border border-primary/30 p-6 shadow-float">
+            <BoomMeter />
           </div>
 
           {/* Features */}

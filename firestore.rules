@@ -105,5 +105,30 @@ service cloud.firestore {
                     .hasOnly(['read', 'updatedAt']) &&
                     isValidTimestamp(request.resource.data.updatedAt);
     }
+
+    // Ratings
+    match /ratings/stats {
+      allow read: if true;
+      allow create: if request.resource.data.keys().hasAll(['totalRatings', 'totalScore', 'ratings']) &&
+                     request.resource.data.totalRatings == 1 &&
+                     request.resource.data.totalScore >= 1 &&
+                     request.resource.data.totalScore <= 5 &&
+                     request.resource.data.ratings is map;
+      allow update: if request.resource.data.diff(resource.data).affectedKeys()
+                     .hasOnly(['totalRatings', 'totalScore', 'ratings']) &&
+                     (request.resource.data.totalRatings == resource.data.totalRatings + 1) &&
+                     (request.resource.data.totalScore >= resource.data.totalScore + 1) &&
+                     (request.resource.data.totalScore <= resource.data.totalScore + 5);
+    }
+
+    match /user_ratings/{userId} {
+      allow read: if request.auth != null;
+      allow create, update: if request.auth != null && 
+                            request.auth.uid == userId &&
+                            request.resource.data.keys().hasAll(['rating', 'timestamp']) &&
+                            request.resource.data.rating >= 1 &&
+                            request.resource.data.rating <= 5 &&
+                            isValidTimestamp(request.resource.data.timestamp);
+    }
   }
 } 
