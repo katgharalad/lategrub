@@ -1,0 +1,64 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isCustomer() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'customer' ||
+         !exists(/databases/$(database)/documents/users/$(request.auth.uid)));
+    }
+    
+    function isDeliveryPerson() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'delivery' ||
+         !exists(/databases/$(database)/documents/users/$(request.auth.uid)));
+    }
+
+    function isParticipantInOrder(orderId) {
+      let order = get(/databases/$(database)/documents/orders/$(orderId));
+      return request.auth.uid == order.data.customerId || 
+             request.auth.uid == order.data.deliveryPersonId;
+    }
+    
+    // User profiles
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if request.auth.uid == userId;
+    }
+    
+    // Orders
+    match /orders/{orderId} {
+      allow read: if isAuthenticated();
+      
+      allow create: if isAuthenticated() && 
+        request.resource.data.customerId == request.auth.uid &&
+        request.resource.data.status == 'ordered';
+      
+      allow update: if isAuthenticated() && (
+        request.auth.uid == resource.data.customerId ||
+        (isDeliveryPerson() && 
+         resource.data.deliveryPersonId == null && 
+         request.resource.data.deliveryPersonId == request.auth.uid &&
+         request.resource.data.status == 'waiting') ||
+        (isDeliveryPerson() && 
+         resource.data.deliveryPersonId == request.auth.uid)
+      );
+    }
+    
+    // Messages
+    match /messages/{messageId} {
+      allow read: if isAuthenticated();
+      
+      allow create: if isAuthenticated() && 
+        isParticipantInOrder(request.resource.data.orderId);
+      
+      allow update: if isAuthenticated() && 
+        isParticipantInOrder(resource.data.orderId) &&
+        request.auth.uid == resource.data.recipientId;
+    }
+  }
+} 
