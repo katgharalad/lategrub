@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import PageLayout from '../components/PageLayout';
 import { useAuth } from '../context/AuthContext';
-import { collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
-import { createOrder, OrderStatus } from '../lib/firebase';
+import PageLayout from '../components/PageLayout';
+import ErrorMessage from '../components/ErrorMessage';
+import { createOrder } from '../lib/firebase';
 
 interface MenuItem {
   id: string;
@@ -136,7 +135,7 @@ const PlaceOrder: React.FC = () => {
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [roomNumber, setRoomNumber] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'barter' | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'barter'>('cash');
   const [paymentDetails, setPaymentDetails] = useState('');
   const [showPaymentInput, setShowPaymentInput] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);

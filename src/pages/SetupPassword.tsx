@@ -4,13 +4,12 @@ import { useAuth } from '../context/AuthContext';
 import PageLayout from '../components/PageLayout';
 import ErrorMessage from '../components/ErrorMessage';
 import { updatePassword } from 'firebase/auth';
-import { auth } from '../lib/firebase';
 import { getDoc, doc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 const SetupPassword: React.FC = () => {
   const navigate = useNavigate();
-  const { user, userRole } = useAuth();
+  const { user } = useAuth();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);

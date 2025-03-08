@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { collection, query, where, onSnapshot, Timestamp, doc, getDoc } from 'firebase/firestore';
 import PageLayout from '../components/PageLayout';
-import ErrorMessage from '../components/ErrorMessage';
 import { useAuth } from '../context/AuthContext';
-import { collection, query, where, onSnapshot, orderBy, Timestamp, doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Order } from '../lib/firebase';
 

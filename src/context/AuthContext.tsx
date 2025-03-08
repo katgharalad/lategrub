@@ -1,28 +1,28 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import {
   User,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
   signOut,
   onAuthStateChanged,
+  signInWithEmailAndPassword,
+  updatePassword,
+  createUserWithEmailAndPassword,
   updateProfile,
   sendEmailVerification,
   sendSignInLinkToEmail,
-  isSignInWithEmailLink,
-  signInWithEmailLink,
-  GoogleAuthProvider,
-  signInWithPopup
+  isSignInWithEmailLink
 } from 'firebase/auth';
+import { auth, db } from '../lib/firebase';
 import { 
   doc, 
   getDoc, 
-  setDoc, 
+  setDoc,
   collection,
-  query, 
-  where, 
+  query,
+  where,
   getDocs
 } from 'firebase/firestore';
-import { auth, db } from '../lib/firebase';
 
 interface AuthContextType {
   user: User | null;

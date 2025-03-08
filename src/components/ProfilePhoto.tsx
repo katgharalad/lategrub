@@ -2,77 +2,75 @@ import React, { useRef, useState } from 'react';
 import { uploadProfilePhoto } from '../lib/firebase';
 
 interface ProfilePhotoProps {
+  name: string;
   userId: string;
-  currentPhotoURL?: string;
-  onPhotoUpdated: (photoURL: string) => void;
+  photoURL?: string;
+  onPhotoUpdated: (photoURL: string) => Promise<void>;
 }
 
-const ProfilePhoto: React.FC<ProfilePhotoProps> = ({ userId, currentPhotoURL, onPhotoUpdated }) => {
-  const fileInputRef = useRef<HTMLInputElement>(null);
+const ProfilePhoto: React.FC<ProfilePhotoProps> = ({
+  name,
+  userId,
+  photoURL,
+  onPhotoUpdated
+}) => {
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handlePhotoClick = () => {
     fileInputRef.current?.click();
   };
 
-  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || !e.target.files[0]) return;
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-    const file = e.target.files[0];
-    if (!file.type.startsWith('image/')) {
-      setError('Please upload an image file.');
-      return;
-    }
-
-    setUploading(true);
-    setError(null);
     try {
+      setUploading(true);
       const newPhotoURL = await uploadProfilePhoto(file, userId);
-      onPhotoUpdated(newPhotoURL);
-    } catch (err) {
-      setError('Failed to upload photo. Please try again.');
+      await onPhotoUpdated(newPhotoURL);
+    } catch (error) {
+      console.error('Error uploading photo:', error);
     } finally {
       setUploading(false);
     }
   };
 
   return (
-    <div className="flex flex-col items-center">
-      <div 
-        className="relative w-32 h-32 mb-4 rounded-full overflow-hidden cursor-pointer group"
+    <div className="relative w-24 h-24 mx-auto mb-4">
+      <button
         onClick={handlePhotoClick}
+        className="w-full h-full rounded-full overflow-hidden focus:outline-none focus:ring-2 focus:ring-primary"
+        disabled={uploading}
       >
-        {currentPhotoURL ? (
-          <img 
-            src={currentPhotoURL} 
-            alt="Profile" 
+        {photoURL ? (
+          <img
+            src={photoURL}
+            alt={name}
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-            <span className="text-4xl text-gray-400">
-              {userId ? userId[0].toUpperCase() : '?'}
+          <div className="w-full h-full bg-background-dark flex items-center justify-center">
+            <span className="text-2xl font-medium text-text-secondary">
+              {name.charAt(0).toUpperCase()}
             </span>
           </div>
         )}
-        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-          <span className="text-white text-sm">Change Photo</span>
+      </button>
+
+      {uploading && (
+        <div className="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center">
+          <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin" />
         </div>
-      </div>
+      )}
+
       <input
-        type="file"
         ref={fileInputRef}
-        onChange={handlePhotoChange}
+        type="file"
         accept="image/*"
+        onChange={handleFileChange}
         className="hidden"
       />
-      {uploading && (
-        <div className="text-sm text-primary">Uploading photo...</div>
-      )}
-      {error && (
-        <div className="text-sm text-red-500">{error}</div>
-      )}
     </div>
   );
 };
