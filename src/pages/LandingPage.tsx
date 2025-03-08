@@ -1,16 +1,28 @@
 import { useNavigate } from 'react-router-dom';
 import { Utensils } from 'lucide-react';
 import PageLayout from '../components/PageLayout';
+import { useAuth } from '../context/AuthContext';
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const { user, setSessionRole } = useAuth();
 
-  const handleCustomerLogin = () => {
-    navigate('/login', { state: { type: 'customer' } });
+  const handleCustomerMode = () => {
+    if (user) {
+      setSessionRole('customer');
+      navigate('/customer');
+    } else {
+      navigate('/login', { state: { selectedRole: 'customer' } });
+    }
   };
 
-  const handleDeliveryLogin = () => {
-    navigate('/login', { state: { type: 'delivery' } });
+  const handleDeliveryMode = () => {
+    if (user) {
+      setSessionRole('delivery');
+      navigate('/delivery');
+    } else {
+      navigate('/login', { state: { selectedRole: 'delivery' } });
+    }
   };
 
   return (
@@ -45,10 +57,10 @@ export default function LandingPage() {
           {/* Action Buttons */}
           <div className="flex flex-col items-center space-y-4">
             <button 
-              onClick={handleCustomerLogin}
+              onClick={handleCustomerMode}
               className="w-64 bg-gradient-accent text-white py-3 px-6 rounded-xl font-medium shadow-glow hover:scale-105 transition-all"
             >
-              Order Now
+              {user ? 'Order Food' : 'I Want to Order'}
             </button>
 
             <div className="flex items-center w-full gap-4 my-2">
@@ -58,10 +70,10 @@ export default function LandingPage() {
             </div>
 
             <button 
-              onClick={handleDeliveryLogin}
+              onClick={handleDeliveryMode}
               className="w-64 bg-background-card text-text-primary py-3 px-6 rounded-xl font-medium border border-primary/30 hover:bg-background-dark transition-all"
             >
-              Deliver Food
+              {user ? 'Switch to Delivery Mode' : 'I Want to Deliver'}
             </button>
           </div>
 

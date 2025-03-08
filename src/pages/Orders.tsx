@@ -6,7 +6,7 @@ import { db } from '../lib/firebase';
 import { Order } from '../lib/firebase';
 
 const Orders: React.FC = () => {
-  const { user, userRole } = useAuth();
+  const { user, sessionRole } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +42,7 @@ const Orders: React.FC = () => {
         const q = query(
           ordersRef,
           where('status', '==', 'delivered'),
-          where(userRole === 'customer' ? 'customerId' : 'deliveryPersonId', '==', user.uid)
+          where(sessionRole === 'customer' ? 'customerId' : 'deliveryPersonId', '==', user.uid)
         );
         console.log('Created query:', q);
 
@@ -108,7 +108,7 @@ const Orders: React.FC = () => {
     };
 
     setupOrdersListener();
-  }, [user, userRole]);
+  }, [user, sessionRole]);
 
   const getOrderNumber = (order: Order) => {
     const orderIndex = orders.findIndex(o => o.id === order.id);
@@ -142,7 +142,7 @@ const Orders: React.FC = () => {
           </div>
         ) : orders.length === 0 ? (
           <div className="text-center py-8 text-text-secondary">
-            {userRole === 'customer' 
+            {sessionRole === 'customer' 
               ? 'No past orders yet. Your completed orders will appear here.'
               : 'No completed deliveries yet. Your completed deliveries will appear here.'}
           </div>
@@ -195,13 +195,13 @@ const Orders: React.FC = () => {
                 </div>
 
                 {/* Show delivery person for customers, show customer for delivery person */}
-                {userRole === 'customer' && order.deliveryPersonId && (
+                {sessionRole === 'customer' && order.deliveryPersonId && (
                   <div className="mb-4">
                     <h4 className="text-sm font-medium text-text-secondary mb-2">Delivered By</h4>
                     <p className="text-sm">{order.deliveryPersonId}</p>
                   </div>
                 )}
-                {userRole === 'delivery' && order.customerId && (
+                {sessionRole === 'delivery' && order.customerId && (
                   <div className="mb-4">
                     <h4 className="text-sm font-medium text-text-secondary mb-2">Customer</h4>
                     <p className="text-sm">{order.customerId}</p>

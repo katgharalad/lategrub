@@ -3,211 +3,107 @@ import { useNavigate } from 'react-router-dom';
 import PageLayout from '../components/PageLayout';
 import BottomNav from '../components/BottomNav';
 import { useAuth } from '../context/AuthContext';
-import { collection, query, where, onSnapshot, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, updateDoc, orderBy } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { Order } from '../lib/firebase';
-
-interface DeliveryOrder extends Order {
-  id: string;
-  restaurant?: {
-    name: string;
-    address: string;
-  };
-  customer: {
-    name: string;
-    address: string;
-    photoURL?: string;
-  };
-  createdAt: Date;
-}
-
-interface UnreadCounts {
-  [orderId: string]: number;
-}
-
-const formatOrderTime = (date: Date) => {
-  return date.toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: 'numeric',
-    hour12: true
-  });
-};
+import { Order, OrderStatus } from '../types';
+import OrderCard from '../components/OrderCard';
 
 const DeliveryDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { user, userRole, loading: authLoading } = useAuth();
-  const [availableOrders, setAvailableOrders] = useState<DeliveryOrder[]>([]);
-  const [acceptedOrders, setAcceptedOrders] = useState<DeliveryOrder[]>([]);
+  const { user, sessionRole } = useAuth();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [activeOrders, setActiveOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'available' | 'accepted' | 'history'>('available');
-  const [unreadCounts, setUnreadCounts] = useState<UnreadCounts>({});
 
   useEffect(() => {
-    if (authLoading) return;
-    
-    if (!user) {
-      console.log('No user found');
-      setError('Please log in to view your dashboard');
-      setLoading(false);
-      return;
-    }
-
-    if (userRole !== 'delivery') {
-      console.log('User is not a delivery person');
+    if (!user || sessionRole !== 'delivery') {
       setError('You do not have permission to view this page');
-      setLoading(false);
       return;
     }
 
-    console.log('Setting up orders listeners for user:', user.uid);
-    
-    try {
-      // Query for available orders (status: 'ordered')
-      const availableOrdersRef = collection(db, 'orders');
-      const availableQuery = query(
-        availableOrdersRef,
-        where('status', '==', 'ordered')
-      );
+    // Query for available orders (status: 'ordered')
+    const availableOrdersQuery = query(
+      collection(db, 'orders'),
+      where('status', '==', 'ordered'),
+      orderBy('createdAt', 'desc')
+    );
 
-      // Query for accepted orders (status: 'waiting', 'got_food', 'walking')
-      const acceptedOrdersRef = collection(db, 'orders');
-      const acceptedQuery = query(
-        acceptedOrdersRef,
-        where('deliveryPersonId', '==', user.uid),
-        where('status', 'in', ['waiting', 'got_food', 'walking'])
-      );
+    // Query for orders assigned to this delivery person
+    const activeOrdersQuery = query(
+      collection(db, 'orders'),
+      where('deliveryPersonId', '==', user.uid),
+      where('status', 'in', ['waiting', 'got_food', 'walking']),
+      orderBy('createdAt', 'desc')
+    );
 
-      // Set up listener for available orders
-      const unsubscribeAvailable = onSnapshot(availableQuery, async (snapshot) => {
-        console.log('Received available orders snapshot:', snapshot.size, 'orders');
-        const orders = await Promise.all(snapshot.docs.map(async (docSnapshot) => {
-          const orderData = docSnapshot.data();
-          console.log('Order data:', orderData);
-          
-          let restaurant = undefined;
-          if (orderData.restaurantId) {
-            try {
-              const restaurantDoc = await getDoc(doc(db, 'restaurants', orderData.restaurantId));
-              const restaurantData = restaurantDoc.exists() ? restaurantDoc.data() : null;
-              restaurant = restaurantData ? {
-                name: restaurantData.name,
-                address: restaurantData.address
-              } : undefined;
-            } catch (error) {
-              console.error('Error fetching restaurant:', error);
-            }
-          }
-          
-          // Fetch customer details
-          const customerDoc = await getDoc(doc(db, 'users', orderData.customerId));
-          const customerData = customerDoc.data();
-          
+    const unsubscribeAvailable = onSnapshot(availableOrdersQuery, (snapshot) => {
+      try {
+        const newOrders = snapshot.docs.map(doc => {
+          const data = doc.data();
           return {
-            id: docSnapshot.id,
-            ...orderData,
-            restaurant,
-            customer: {
-              name: customerData?.name || 'Unknown Customer',
-              address: orderData.deliveryAddress || 'Address not available',
-              photoURL: customerData?.photoURL
-            },
-            createdAt: orderData.createdAt?.toDate() || new Date()
-          };
-        })) as DeliveryOrder[];
-        
-        console.log('Processed orders:', orders);
-        setAvailableOrders(orders);
+            id: doc.id,
+            customerName: data.customerName || 'Unknown Customer',
+            customerId: data.customerId,
+            deliveryPersonId: data.deliveryPersonId,
+            deliveryAddress: data.deliveryAddress,
+            items: data.items || [],
+            total: data.total || 0,
+            status: data.status as OrderStatus,
+            createdAt: data.createdAt?.toDate() || new Date(),
+            updatedAt: data.updatedAt?.toDate() || new Date(),
+            paymentMethod: data.paymentMethod,
+            paymentDetails: data.paymentDetails
+          } as Order;
+        });
+        setOrders(newOrders);
         setLoading(false);
-      }, (error) => {
-        console.error('Error fetching available orders:', error);
-        setError('Error loading available orders. Please try again.');
+      } catch (err) {
+        console.error('Error processing available orders:', err);
+        setError('Failed to process available orders');
         setLoading(false);
-      });
-
-      // Set up listener for accepted orders
-      const unsubscribeAccepted = onSnapshot(acceptedQuery, async (snapshot) => {
-        console.log('Received accepted orders snapshot:', snapshot.size, 'orders');
-        const orders = await Promise.all(snapshot.docs.map(async (docSnapshot) => {
-          const orderData = docSnapshot.data();
-          console.log('Accepted order data:', orderData);
-          
-          let restaurant = undefined;
-          if (orderData.restaurantId) {
-            try {
-              const restaurantDoc = await getDoc(doc(db, 'restaurants', orderData.restaurantId));
-              const restaurantData = restaurantDoc.exists() ? restaurantDoc.data() : null;
-              restaurant = restaurantData ? {
-                name: restaurantData.name,
-                address: restaurantData.address
-              } : undefined;
-            } catch (error) {
-              console.error('Error fetching restaurant:', error);
-            }
-          }
-          
-          // Fetch customer details
-          const customerDoc = await getDoc(doc(db, 'users', orderData.customerId));
-          const customerData = customerDoc.data();
-          
-          return {
-            id: docSnapshot.id,
-            ...orderData,
-            restaurant,
-            customer: {
-              name: customerData?.name || 'Unknown Customer',
-              address: orderData.deliveryAddress || 'Address not available',
-              photoURL: customerData?.photoURL
-            },
-            createdAt: orderData.createdAt?.toDate() || new Date()
-          };
-        })) as DeliveryOrder[];
-        
-        console.log('Processed accepted orders:', orders);
-        setAcceptedOrders(orders);
-        setLoading(false);
-      }, (error) => {
-        console.error('Error fetching accepted orders:', error);
-        setError('Error loading accepted orders. Please try again.');
-        setLoading(false);
-      });
-
-      // Set up messages listener for unread counts
-      const setupMessagesListener = () => {
-        const messagesRef = collection(db, 'messages');
-        const unsubscribe = onSnapshot(
-          query(
-            messagesRef,
-            where('recipientId', '==', user.uid),
-            where('read', '==', false)
-          ),
-          (snapshot) => {
-            const counts: UnreadCounts = {};
-            snapshot.docs.forEach(doc => {
-              const data = doc.data();
-              counts[data.orderId] = (counts[data.orderId] || 0) + 1;
-            });
-            setUnreadCounts(counts);
-          }
-        );
-        return unsubscribe;
-      };
-
-      const unsubscribeMessages = setupMessagesListener();
-
-      return () => {
-        if (unsubscribeAvailable) unsubscribeAvailable();
-        if (unsubscribeAccepted) unsubscribeAccepted();
-        unsubscribeMessages();
-      };
-    } catch (error) {
-      console.error('Error setting up orders listeners:', error);
-      setError('Error loading dashboard data. Please try again.');
+      }
+    }, (err) => {
+      console.error('Error fetching available orders:', err);
+      setError('Failed to load available orders');
       setLoading(false);
-    }
-  }, [user, userRole, authLoading]);
+    });
+
+    const unsubscribeActive = onSnapshot(activeOrdersQuery, (snapshot) => {
+      try {
+        const newOrders = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            customerName: data.customerName || 'Unknown Customer',
+            customerId: data.customerId,
+            deliveryPersonId: data.deliveryPersonId,
+            deliveryAddress: data.deliveryAddress,
+            items: data.items || [],
+            total: data.total || 0,
+            status: data.status as OrderStatus,
+            createdAt: data.createdAt?.toDate() || new Date(),
+            updatedAt: data.updatedAt?.toDate() || new Date(),
+            paymentMethod: data.paymentMethod,
+            paymentDetails: data.paymentDetails
+          } as Order;
+        });
+        setActiveOrders(newOrders);
+      } catch (err) {
+        console.error('Error processing active orders:', err);
+        setError('Failed to process active orders');
+      }
+    }, (err) => {
+      console.error('Error fetching active orders:', err);
+      setError('Failed to load your active orders');
+    });
+
+    return () => {
+      unsubscribeAvailable();
+      unsubscribeActive();
+    };
+  }, [user, sessionRole]);
 
   const handleAcceptOrder = async (orderId: string) => {
     if (!user) return;
@@ -215,7 +111,7 @@ const DeliveryDashboard: React.FC = () => {
     try {
       const orderRef = doc(db, 'orders', orderId);
       await updateDoc(orderRef, {
-        status: 'waiting',
+        status: 'waiting' as OrderStatus,
         deliveryPersonId: user.uid
       });
       setActiveTab('accepted');
@@ -225,11 +121,12 @@ const DeliveryDashboard: React.FC = () => {
     }
   };
 
-  const handleUpdateStatus = async (orderId: string, newStatus: Order['status']) => {
+  const handleUpdateStatus = async (orderId: string, newStatus: OrderStatus) => {
     try {
       const orderRef = doc(db, 'orders', orderId);
       await updateDoc(orderRef, {
-        status: newStatus
+        status: newStatus,
+        updatedAt: new Date()
       });
     } catch (error) {
       console.error('Error updating order status:', error);
@@ -237,32 +134,10 @@ const DeliveryDashboard: React.FC = () => {
     }
   };
 
-  const getOrderProgress = (status: Order['status']) => {
-    const stages: Order['status'][] = ['ordered', 'waiting', 'got_food', 'walking', 'delivered'];
-    return stages.indexOf(status);
-  };
-
-  const getStatusColor = (status: Order['status']) => {
-    switch (status) {
-      case 'ordered':
-        return 'bg-yellow-500';
-      case 'waiting':
-        return 'bg-blue-500';
-      case 'got_food':
-        return 'bg-green-500';
-      case 'walking':
-        return 'bg-purple-500';
-      case 'delivered':
-        return 'bg-gray-500';
-      default:
-        return 'bg-gray-500';
-    }
-  };
-
-  if (authLoading || loading) {
+  if (loading) {
     return (
       <PageLayout>
-        <div className="flex justify-center items-center min-h-screen">
+        <div className="flex items-center justify-center min-h-screen">
           <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         </div>
       </PageLayout>
@@ -272,11 +147,14 @@ const DeliveryDashboard: React.FC = () => {
   if (error) {
     return (
       <PageLayout>
-        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
-          <p className="text-red-400">{error}</p>
-          <p className="text-sm text-red-400/80 mt-2">
-            If this error persists, please try logging out and back in.
-          </p>
+        <div className="min-h-screen flex flex-col items-center justify-center p-4">
+          <div className="bg-background-card rounded-xl p-8 shadow-float max-w-md w-full space-y-4">
+            <h2 className="text-2xl font-bold text-center text-red-400">Access Denied</h2>
+            <p className="text-center text-text-secondary">{error}</p>
+            <p className="text-sm text-red-400/80 mt-2">
+              If this error persists, please try logging out and back in.
+            </p>
+          </div>
         </div>
       </PageLayout>
     );
@@ -298,9 +176,9 @@ const DeliveryDashboard: React.FC = () => {
               <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
-                </div>
-            <p className="mt-2 text-2xl font-bold">{availableOrders.length}</p>
-                </button>
+            </div>
+            <p className="mt-2 text-2xl font-bold">{orders.length}</p>
+          </button>
 
           <button
             onClick={() => setActiveTab('accepted')}
@@ -313,8 +191,8 @@ const DeliveryDashboard: React.FC = () => {
               <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
               </svg>
-              </div>
-            <p className="mt-2 text-2xl font-bold">{acceptedOrders.length}</p>
+            </div>
+            <p className="mt-2 text-2xl font-bold">{activeOrders.length}</p>
           </button>
 
           <button
@@ -328,7 +206,7 @@ const DeliveryDashboard: React.FC = () => {
               <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
               </svg>
-          </div>
+            </div>
             <p className="mt-2 text-2xl font-bold">📋</p>
           </button>
         </div>
@@ -339,7 +217,7 @@ const DeliveryDashboard: React.FC = () => {
             <h2 className="text-lg font-bold">
               {activeTab === 'available' ? 'Available Orders' : 
                activeTab === 'accepted' ? 'Accepted Orders' : 'Delivery History'}
-            </h2>
+          </h2>
             <div className="flex items-center space-x-2">
               <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
               <span className="text-sm text-text-secondary">Live Updates</span>
@@ -348,161 +226,29 @@ const DeliveryDashboard: React.FC = () => {
 
           <div className="space-y-4">
             {activeTab === 'accepted' ? (
-              acceptedOrders.length === 0 ? (
+              activeOrders.length === 0 ? (
                 <p className="text-center text-text-secondary py-4">No accepted orders at the moment.</p>
               ) : (
-                acceptedOrders.map((order) => (
-                  <div
-                    key={order.id}
-                    className="bg-background-dark rounded-xl p-4"
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <h3 className="font-medium">{order.customer.name}</h3>
-                        <p className="text-sm text-text-secondary">{order.customer.address}</p>
-                        <p className="text-xs text-text-secondary mt-1">
-                          Ordered {formatOrderTime(order.createdAt)}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => navigate(`/chat/${order.id}`)}
-                          className="relative flex items-center gap-1 px-3 py-1 bg-primary/20 text-primary rounded-full hover:bg-primary/30 transition-colors"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                          </svg>
-                          <span className="text-xs">Chat</span>
-                          {order.id && unreadCounts[order.id] > 0 && (
-                            <span className="absolute -top-1 -right-1 w-4 h-4 bg-primary text-white text-xs rounded-full flex items-center justify-center">
-                              {unreadCounts[order.id]}
-                            </span>
-                          )}
-                        </button>
-                        <div className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}>
-                          {order.status.toUpperCase()}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Order Items */}
-                    <div className="bg-background-DEFAULT rounded-lg p-3 mb-4">
-                      <h4 className="text-sm font-medium mb-2">Order Items:</h4>
-                      <div className="space-y-2">
-                        {order.items.map((item, index) => (
-                          <div key={index} className="flex justify-between text-sm">
-                            <span>{item.quantity}x {item.name}</span>
-                            <span>${(item.price * item.quantity).toFixed(2)}</span>
-                          </div>
-                        ))}
-                        <div className="border-t border-background-dark pt-2 mt-2">
-                          <div className="flex justify-between text-sm font-medium">
-                            <span>Total</span>
-                            <span>${order.total.toFixed(2)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="relative h-2 bg-background-dark rounded-full overflow-hidden">
-                        <div 
-                          className="absolute inset-y-0 left-0 bg-primary transition-all duration-500"
-                          style={{ width: `${(getOrderProgress(order.status) / 4) * 100}%` }}
-                        />
-                        <div className="absolute inset-0 flex justify-between px-2">
-                          <div className={`w-1 h-full ${getOrderProgress(order.status) >= 0 ? 'bg-primary' : 'bg-background-dark'}`} />
-                          <div className={`w-1 h-full ${getOrderProgress(order.status) >= 1 ? 'bg-primary' : 'bg-background-dark'}`} />
-                          <div className={`w-1 h-full ${getOrderProgress(order.status) >= 2 ? 'bg-primary' : 'bg-background-dark'}`} />
-                          <div className={`w-1 h-full ${getOrderProgress(order.status) >= 3 ? 'bg-primary' : 'bg-background-dark'}`} />
-                          <div className={`w-1 h-full ${getOrderProgress(order.status) >= 4 ? 'bg-primary' : 'bg-background-dark'}`} />
-                        </div>
-                      </div>
-                      <div className="flex justify-between text-xs text-text-secondary">
-                        <span>Waiting</span>
-                        <span>Got Food</span>
-                        <span>Walking</span>
-                        <span>Delivered</span>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 grid grid-cols-2 gap-2">
-                      {order.status === 'waiting' && (
-                        <button
-                          onClick={() => handleUpdateStatus(order.id, 'got_food')}
-                          className="bg-primary text-white py-2 rounded-xl hover:bg-primary-dark transition-colors"
-                        >
-                          Got Food
-                        </button>
-                      )}
-                      {order.status === 'got_food' && (
-                        <button
-                          onClick={() => handleUpdateStatus(order.id, 'walking')}
-                          className="bg-primary text-white py-2 rounded-xl hover:bg-primary-dark transition-colors"
-                        >
-                          Start Walking
-                        </button>
-                      )}
-                      {order.status === 'walking' && (
-                        <button
-                          onClick={() => handleUpdateStatus(order.id, 'delivered')}
-                          className="bg-primary text-white py-2 rounded-xl hover:bg-primary-dark transition-colors"
-                        >
-                          Mark as Delivered
-                        </button>
-                      )}
-                    </div>
-                  </div>
+                activeOrders.map((order) => (
+                  <OrderCard 
+                    key={order.id} 
+                    order={order} 
+                    isDeliveryView 
+                    onUpdateStatus={handleUpdateStatus}
+                  />
                 ))
               )
             ) : activeTab === 'available' ? (
-              availableOrders.length === 0 ? (
+              orders.length === 0 ? (
                 <p className="text-center text-text-secondary py-4">No available orders at the moment.</p>
               ) : (
-                availableOrders.map((order) => (
-                  <div
-                    key={order.id}
-                    className="bg-background-dark rounded-xl p-4"
-                  >
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <h3 className="font-medium">{order.customer.name}</h3>
-                        <p className="text-sm text-text-secondary">{order.customer.address}</p>
-                        <p className="text-xs text-text-secondary mt-1">
-                          Ordered {formatOrderTime(order.createdAt)}
-                        </p>
-                      </div>
-                      <div className="px-3 py-1 rounded-full text-sm font-medium bg-yellow-500">
-                        AVAILABLE
-                      </div>
-                    </div>
-
-                    {/* Order Items */}
-                    <div className="bg-background-DEFAULT rounded-lg p-3 mb-4">
-                      <h4 className="text-sm font-medium mb-2">Order Items:</h4>
-                      <div className="space-y-2">
-                        {order.items.map((item, index) => (
-                          <div key={index} className="flex justify-between text-sm">
-                            <span>{item.quantity}x {item.name}</span>
-                            <span>${(item.price * item.quantity).toFixed(2)}</span>
-                          </div>
-                        ))}
-                        <div className="border-t border-background-dark pt-2 mt-2">
-                          <div className="flex justify-between text-sm font-medium">
-                            <span>Total</span>
-                            <span>${order.total.toFixed(2)}</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => handleAcceptOrder(order.id)}
-                      className="w-full bg-primary text-white py-2 rounded-xl hover:bg-primary-dark transition-colors"
-                    >
-                      Accept Order
-                    </button>
-                  </div>
+                orders.map((order) => (
+                  <OrderCard 
+                    key={order.id} 
+                    order={order} 
+                    isDeliveryView 
+                    onAccept={handleAcceptOrder}
+                  />
                 ))
               )
             ) : null}

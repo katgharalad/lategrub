@@ -32,7 +32,7 @@ interface UserData {
 
 const Chat: React.FC = () => {
   const { orderId } = useParams<{ orderId: string }>();
-  const { user, userRole } = useAuth();
+  const { user, sessionRole } = useAuth();
   const navigate = useNavigate();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -44,12 +44,12 @@ const Chat: React.FC = () => {
 
   // Fetch all active chats
   useEffect(() => {
-    if (!user || !userRole) return;
+    if (!user || !sessionRole) return;
 
     const ordersRef = collection(db, 'orders');
     let ordersQuery;
     
-    if (userRole === 'customer') {
+    if (sessionRole === 'customer') {
       ordersQuery = query(
         ordersRef,
         where('customerId', '==', user.uid),
@@ -71,10 +71,10 @@ const Chat: React.FC = () => {
           const orderData = docSnapshot.data() as Order;
           
           // Skip orders that don't have both participants yet
-          if (userRole === 'customer' && !orderData.deliveryPersonId) continue;
-          if (userRole === 'delivery' && !orderData.customerId) continue;
+          if (sessionRole === 'customer' && !orderData.deliveryPersonId) continue;
+          if (sessionRole === 'delivery' && !orderData.customerId) continue;
           
-          const participantId = userRole === 'customer' 
+          const participantId = sessionRole === 'customer' 
             ? orderData.deliveryPersonId 
             : orderData.customerId;
 
@@ -139,7 +139,7 @@ const Chat: React.FC = () => {
     return () => {
       unsubscribeOrders();
     };
-  }, [user, userRole]);
+  }, [user, sessionRole]);
 
   // Fetch chat participant info for specific chat
   useEffect(() => {
@@ -154,7 +154,7 @@ const Chat: React.FC = () => {
         }
 
         const orderData = orderDoc.data();
-        const participantId = userRole === 'customer' 
+        const participantId = sessionRole === 'customer' 
           ? orderData.deliveryPersonId 
           : orderData.customerId;
 
@@ -185,7 +185,7 @@ const Chat: React.FC = () => {
     if (orderId) {
       fetchParticipant();
     }
-  }, [orderId, user, userRole]);
+  }, [orderId, user, sessionRole]);
 
   // Set up real-time messages listener for specific chat
   useEffect(() => {
@@ -248,7 +248,7 @@ const Chat: React.FC = () => {
         text: newMessage.trim(),
         sender: {
           id: user.uid,
-          role: userRole,
+          role: sessionRole,
         },
         recipientId: participant.id,
         read: false,
@@ -307,7 +307,7 @@ const Chat: React.FC = () => {
           
           {chatPreviews.length === 0 ? (
             <div className="text-center py-8 text-text-secondary">
-              {userRole === 'customer' 
+              {sessionRole === 'customer' 
                 ? "No active chats. Your conversations with delivery partners will appear here."
                 : "No active chats. Accept orders to start conversations with customers."}
             </div>

@@ -1,15 +1,16 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { UserRole } from '../lib/firebase';
+
+type Role = 'customer' | 'delivery';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: UserRole;
+  requiredRole?: Role;
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole }) => {
-  const { user, userRole, loading, needsPasswordSetup } = useAuth();
+  const { user, sessionRole, loading } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -21,15 +22,12 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole 
   }
 
   if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to="/login" state={{ from: location, selectedRole: requiredRole }} replace />;
   }
 
-  if (needsPasswordSetup && location.pathname !== '/setup-password') {
-    return <Navigate to="/setup-password" replace />;
-  }
-
-  if (requiredRole && userRole !== requiredRole) {
-    return <Navigate to={`/${userRole}`} replace />;
+  // If no session role is set or it doesn't match the required role, redirect to landing
+  if (requiredRole && (!sessionRole || sessionRole !== requiredRole)) {
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;

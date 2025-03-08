@@ -1,215 +1,133 @@
 import React, { useState, useEffect } from 'react';
-import PageLayout from '../components/PageLayout';
-import { useAuth } from '../context/AuthContext';
-import { collection, query, where, onSnapshot, Timestamp, doc, getDoc } from 'firebase/firestore';
+import { useNavigate } from 'react-router-dom';
+import { collection, query, where, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { Order } from '../lib/firebase';
+import { useAuth } from '../context/AuthContext';
+import { Order } from '../types';
+import PageLayout from '../components/PageLayout';
+import OrderCard from '../components/OrderCard';
+import BottomNav from '../components/BottomNav';
 
 const PastOrders: React.FC = () => {
-  const { user } = useAuth();
+  const navigate = useNavigate();
+  const { user, sessionRole } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user) {
-      console.log('No user found');
-      setError('Please log in to view your orders');
+    if (!user || sessionRole !== 'customer') {
+      setError('Only customers can view past orders');
       setLoading(false);
       return;
     }
 
-    console.log('Setting up orders listener for user:', user.uid);
-    
-    const setupOrdersListener = async () => {
+    const ordersQuery = query(
+      collection(db, 'orders'),
+      where('customerId', '==', user.uid),
+      where('status', '==', 'delivered'),
+      orderBy('createdAt', 'desc')
+    );
+
+    const unsubscribe = onSnapshot(ordersQuery, (snapshot) => {
       try {
-        // First, verify the user's role
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (!userDoc.exists()) {
-          console.log('User document not found');
-          setError('User profile not found. Please contact support.');
-          setLoading(false);
-          return;
-        }
-
-        const userData = userDoc.data();
-        console.log('User data:', userData);
-        
-        if (userData.role !== 'customer') {
-          console.log('User is not a customer:', userData.role);
-          setError('Only customers can view past orders.');
-          setLoading(false);
-          return;
-        }
-
-        console.log('User role verified:', userData.role);
-        
-        const ordersRef = collection(db, 'orders');
-        console.log('Created orders collection reference');
-        
-        // Query for all orders for this customer
-        const q = query(
-          ordersRef,
-          where('customerId', '==', user.uid)
-        );
-        console.log('Created query:', q);
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-          console.log('Received orders snapshot:', snapshot.size, 'orders');
-          const ordersData = snapshot.docs.map(doc => {
-            const data = doc.data();
-            console.log('Raw order data:', { id: doc.id, ...data });
-            
-            // Handle createdAt field
-            let createdAt = new Date();
-            if (data.createdAt) {
-              if (data.createdAt instanceof Timestamp) {
-                createdAt = data.createdAt.toDate();
-              } else if (typeof data.createdAt === 'string') {
-                createdAt = new Date(data.createdAt);
-              }
-            }
-            
-            return {
-              id: doc.id,
-              ...data,
-              createdAt
-            };
-          }) as Order[];
-          
-          console.log('All orders before filtering:', ordersData);
-          
-          // Filter delivered orders in memory
-          const pastOrders = ordersData.filter(order => {
-            console.log('Checking order status:', order.id, order.status);
-            return order.status === 'delivered';
-          });
-          
-          console.log('Filtered past orders:', pastOrders);
-          setOrders(pastOrders);
-          setLoading(false);
-          setError(null);
-        }, (error: any) => {
-          console.error('Error fetching orders:', error);
-          let errorMessage = 'Error loading orders. Please try again.';
-          
-          if (error.code === 'permission-denied') {
-            errorMessage = 'You do not have permission to view orders. Please contact support.';
-          } else if (error.code === 'unavailable') {
-            errorMessage = 'Service is currently unavailable. Please try again later.';
-          } else if (error.code === 'not-found') {
-            errorMessage = 'Orders collection not found. Please contact support.';
-          } else if (error.code === 'failed-precondition') {
-            errorMessage = 'Database index is being built. Please try again in a few minutes.';
-          }
-          
-          setError(`${errorMessage} (Error: ${error.code})`);
-          setLoading(false);
+        const newOrders = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            customerName: data.customerName || 'Unknown Customer',
+            customerId: data.customerId,
+            deliveryPersonId: data.deliveryPersonId,
+            deliveryAddress: data.deliveryAddress,
+            items: data.items || [],
+            total: data.total || 0,
+            status: data.status,
+            createdAt: data.createdAt?.toDate() || new Date(),
+            updatedAt: data.updatedAt?.toDate() || new Date(),
+            paymentMethod: data.paymentMethod,
+            paymentDetails: data.paymentDetails
+          } as Order;
         });
-
-        return () => unsubscribe();
-      } catch (err: any) {
-        console.error('Error setting up query:', err);
-        setError(`Error setting up orders query: ${err.message}`);
+        setOrders(newOrders);
+        setLoading(false);
+      } catch (err) {
+        console.error('Error processing orders:', err);
+        setError('Failed to load past orders');
         setLoading(false);
       }
-    };
+    }, (err) => {
+      console.error('Error fetching orders:', err);
+      setError('Failed to load past orders');
+      setLoading(false);
+    });
 
-    setupOrdersListener();
-  }, [user]);
+    return () => unsubscribe();
+  }, [user, sessionRole]);
 
-  const getOrderNumber = (order: Order) => {
-    const orderIndex = orders.findIndex(o => o.id === order.id);
-    return orderIndex + 1;
-  };
+  if (loading) {
+    return (
+      <PageLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        </div>
+      </PageLayout>
+    );
+  }
 
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: 'numeric',
-    }).format(date);
-  };
-
-  return (
-    <PageLayout title="Past Orders">
-      <div className="space-y-6">
-        {error && (
-          <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
-            <p className="text-red-400">{error}</p>
+  if (error) {
+    return (
+      <PageLayout>
+        <div className="min-h-screen flex flex-col items-center justify-center p-4">
+          <div className="bg-background-card rounded-xl p-8 shadow-float max-w-md w-full space-y-4">
+            <h2 className="text-2xl font-bold text-center text-red-400">Access Denied</h2>
+            <p className="text-center text-text-secondary">{error}</p>
             <p className="text-sm text-red-400/80 mt-2">
               If this error persists, please try logging out and back in.
             </p>
+            <button
+              onClick={() => navigate('/customer')}
+              className="w-full bg-primary text-white py-2 rounded-xl hover:bg-primary-dark transition-colors mt-4"
+            >
+              Back to Dashboard
+            </button>
           </div>
-        )}
-        
-        {loading ? (
-          <div className="flex justify-center py-8">
-            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : orders.length === 0 ? (
-          <div className="text-center py-8 text-text-secondary">
-            No past orders yet. Your completed orders will appear here.
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {orders.map((order) => (
-              <div key={order.id} className="bg-background-card rounded-xl p-6">
-                {/* Order Header */}
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="text-lg font-bold">Order #{getOrderNumber(order)}</h3>
-                    <p className="text-sm text-text-secondary">
-                      Delivered on {formatDate(order.createdAt)}
-                    </p>
-                  </div>
-                  <div className="px-3 py-1 rounded-full text-sm font-medium bg-green-500">
-                    DELIVERED
-                  </div>
-                </div>
+        </div>
+      </PageLayout>
+    );
+  }
 
-                {/* Order Items */}
-                <div className="mb-4">
-                  <h4 className="text-sm font-medium text-text-secondary mb-2">Items</h4>
-                  <div className="space-y-2">
-                    {order.items.map((item, index) => (
-                      <div key={index} className="flex justify-between text-sm">
-                        <span>{item.name} x{item.quantity}</span>
-                        <span>${(item.price * item.quantity).toFixed(2)}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+  return (
+    <PageLayout>
+      <div className="max-w-4xl mx-auto px-4 py-8">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold">Past Orders</h1>
+          <button
+            onClick={() => navigate('/customer')}
+            className="text-primary hover:text-primary-dark transition-colors"
+          >
+            Back to Dashboard
+          </button>
+        </div>
 
-                {/* Delivery Address */}
-                <div className="mb-4">
-                  <h4 className="text-sm font-medium text-text-secondary mb-2">Delivery Address</h4>
-                  <p className="text-sm">{order.deliveryAddress}</p>
-                </div>
-
-                {/* Payment Info */}
-                <div className="mb-4">
-                  <h4 className="text-sm font-medium text-text-secondary mb-2">Payment</h4>
-                  <div className="flex justify-between text-sm">
-                    <span>{order.paymentMethod.toUpperCase()}</span>
-                    <span>${order.total.toFixed(2)}</span>
-                  </div>
-                  <p className="text-sm text-text-secondary mt-1">{order.paymentDetails}</p>
-                </div>
-
-                {/* Delivery Person */}
-                {order.deliveryPersonId && (
-                  <div className="mb-4">
-                    <h4 className="text-sm font-medium text-text-secondary mb-2">Delivered By</h4>
-                    <p className="text-sm">{order.deliveryPersonId}</p>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
+        <div className="space-y-4">
+          {orders.length === 0 ? (
+            <div className="text-center py-8 text-text-secondary">
+              <p>No past orders yet.</p>
+              <button
+                onClick={() => navigate('/place-order')}
+                className="mt-4 text-primary hover:text-primary-dark transition-colors"
+              >
+                Place your first order
+              </button>
+            </div>
+          ) : (
+            orders.map((order) => (
+              <OrderCard key={order.id} order={order} />
+            ))
+          )}
+        </div>
       </div>
+      <BottomNav />
     </PageLayout>
   );
 };

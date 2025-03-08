@@ -100,6 +100,10 @@ const CustomerDashboard: React.FC = () => {
     }
   };
 
+  const handlePastOrdersClick = () => {
+    navigate('/past-orders');
+  };
+
   return (
     <PageLayout>
       <div className="space-y-6">
@@ -115,7 +119,7 @@ const CustomerDashboard: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
             </div>
-            <p className="mt-2 text-2xl font-bold text-primary">+</p>
+            <p className="mt-2 text-2xl font-bold">+</p>
           </button>
 
           <button
@@ -132,7 +136,7 @@ const CustomerDashboard: React.FC = () => {
           </button>
 
           <button
-            onClick={() => navigate('/past-orders')}
+            onClick={handlePastOrdersClick}
             className="bg-background-card rounded-xl p-4 hover:bg-background-dark transition-colors text-left"
           >
             <div className="flex items-center justify-between">

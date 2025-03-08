@@ -3,7 +3,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // Helper functions
     function isAuthenticated() {
-      return request.auth != null;
+      return request.auth != null && request.auth.token.email_verified == true;
     }
     
     function isCustomer() {
@@ -21,25 +21,38 @@ service cloud.firestore {
       return request.auth.uid == order.data.customerId || 
              request.auth.uid == order.data.deliveryPersonId;
     }
+
+    function isValidTimestamp(ts) {
+      return ts is timestamp && ts.toMillis() > 0;
+    }
     
     // Verification codes collection
     match /verification_codes/{docId} {
-      allow read, delete: if true;
+      allow read: if request.auth != null;
+      allow delete: if request.auth != null && 
+                     resource.data.email == request.auth.token.email;
       allow create: if request.resource.data.email.matches('.*@owu\\.edu$') &&
-                     request.resource.data.createdAt is timestamp &&
-                     request.resource.data.expiresAt is timestamp &&
-                     request.resource.data.code is string;
+                     isValidTimestamp(request.resource.data.createdAt) &&
+                     isValidTimestamp(request.resource.data.expiresAt) &&
+                     request.resource.data.code is string &&
+                     request.resource.data.code.size() >= 6;
     }
     
     // User profiles
     match /users/{userId} {
-      allow read: if true;
-      allow create: if request.resource.data.email.matches('.*@owu\\.edu$') &&
+      allow read: if request.auth != null;
+      allow create: if request.auth.uid == userId &&
+                     request.resource.data.email.matches('.*@owu\\.edu$') &&
                      request.resource.data.role in ['customer', 'delivery'] &&
-                     request.resource.data.keys().hasAll(['name', 'email', 'role', 'uid', 'emailVerified', 'createdAt', 'updatedAt']);
+                     request.resource.data.keys().hasAll(['name', 'email', 'role', 'uid', 'emailVerified', 'createdAt', 'updatedAt']) &&
+                     isValidTimestamp(request.resource.data.createdAt) &&
+                     isValidTimestamp(request.resource.data.updatedAt);
       allow update: if request.auth.uid == userId &&
                      (request.resource.data.diff(resource.data).affectedKeys()
-                      .hasOnly(['emailVerified', 'updatedAt', 'photoURL', 'displayName', 'phone', 'address']));
+                      .hasOnly(['emailVerified', 'updatedAt', 'photoURL', 'displayName', 'phone', 'address', 'role']) &&
+                     (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']) || 
+                      request.resource.data.role in ['customer', 'delivery'])) &&
+                     isValidTimestamp(request.resource.data.updatedAt);
     }
     
     // Orders
@@ -53,38 +66,44 @@ service cloud.firestore {
       allow create: if isAuthenticated() && 
         request.resource.data.customerId == request.auth.uid &&
         request.resource.data.status == 'ordered' &&
-        request.auth.token.email_verified == true;
+        isValidTimestamp(request.resource.data.createdAt) &&
+        isValidTimestamp(request.resource.data.updatedAt) &&
+        request.resource.data.total is number &&
+        request.resource.data.total > 0;
       
-      allow update: if isAuthenticated() && 
-                     request.auth.token.email_verified == true && (
-        request.auth.uid == resource.data.customerId ||
+      allow update: if isAuthenticated() && (
+        (request.auth.uid == resource.data.customerId && 
+         request.resource.data.diff(resource.data).affectedKeys()
+         .hasOnly(['status', 'updatedAt'])) ||
         (isDeliveryPerson() && 
          resource.data.deliveryPersonId == null && 
          request.resource.data.deliveryPersonId == request.auth.uid &&
          request.resource.data.status == 'waiting') ||
         (isDeliveryPerson() && 
-         resource.data.deliveryPersonId == request.auth.uid)
-      );
+         resource.data.deliveryPersonId == request.auth.uid &&
+         request.resource.data.diff(resource.data).affectedKeys()
+         .hasOnly(['status', 'updatedAt']))
+      ) && isValidTimestamp(request.resource.data.updatedAt);
     }
     
     // Messages
     match /messages/{messageId} {
       allow read: if isAuthenticated() && 
-                   request.auth.token.email_verified == true && 
                    isParticipantInOrder(resource.data.orderId);
       
-      allow create: if isAuthenticated() && 
-                    request.auth.token.email_verified == true &&
+      allow create: if isAuthenticated() &&
                     isParticipantInOrder(request.resource.data.orderId) &&
                     request.resource.data.text is string &&
-                    request.resource.data.text.size() <= 1000;
+                    request.resource.data.text.size() <= 1000 &&
+                    request.resource.data.text.size() > 0 &&
+                    isValidTimestamp(request.resource.data.createdAt);
       
-      allow update: if isAuthenticated() && 
-                    request.auth.token.email_verified == true &&
+      allow update: if isAuthenticated() &&
                     isParticipantInOrder(resource.data.orderId) &&
                     request.auth.uid == resource.data.recipientId &&
                     request.resource.data.diff(resource.data).affectedKeys()
-                    .hasOnly(['read']);
+                    .hasOnly(['read', 'updatedAt']) &&
+                    isValidTimestamp(request.resource.data.updatedAt);
     }
   }
 } 

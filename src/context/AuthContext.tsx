@@ -24,15 +24,16 @@ import {
 
 interface AuthContextType {
   user: User | null;
-  userRole: string | null;
+  sessionRole: string | null;
   loading: boolean;
   needsPasswordSetup: boolean;
-  signup: (email: string, name: string, role: string) => Promise<void>;
-  completeSignup: (email: string, password: string, name: string, role: string) => Promise<User>;
-  login: (email: string, password: string) => Promise<void>;
+  signup: (email: string, name: string, selectedRole: string) => Promise<void>;
+  completeSignup: (email: string, password: string, name: string, selectedRole: string) => Promise<User>;
+  login: (email: string, password: string, selectedRole: string) => Promise<void>;
   logout: () => Promise<void>;
   isEmailLink: (link: string) => boolean;
-  signInWithGoogle: (role: string) => Promise<void>;
+  signInWithGoogle: (selectedRole: string) => Promise<void>;
+  setSessionRole: (role: 'customer' | 'delivery') => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -47,23 +48,23 @@ export const useAuth = () => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [userRole, setUserRole] = useState<string | null>(null);
+  const [sessionRole, setSessionRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [needsPasswordSetup, setNeedsPasswordSetup] = useState(false);
 
-  const fetchUserRole = async (uid: string) => {
-    console.log('Fetching user role for UID:', uid);
+  const fetchUserData = async (uid: string) => {
+    console.log('Fetching user data for UID:', uid);
     const userDoc = await getDoc(doc(db, 'users', uid));
-    console.log('User document exists:', userDoc.exists());
     if (userDoc.exists()) {
       const userData = userDoc.data();
-      console.log('User data:', userData);
-      console.log('Setting user role to:', userData.role);
-      setUserRole(userData.role);
+      // Set the session role from the stored role if not already set
+      if (!sessionRole && userData.role) {
+        setSessionRole(userData.role);
+      }
     } else {
       console.log('No user document found in Firestore');
-      setUserRole(null);
     }
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -71,12 +72,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Auth state changed:', user?.uid);
       setUser(user);
       if (user) {
-        await fetchUserRole(user.uid);
-        // Check if the user signed in with Google and hasn't set up a password
-        const providerId = user.providerData[0]?.providerId;
-        setNeedsPasswordSetup(providerId === 'google.com' && !user.providerData.some(p => p.providerId === 'password'));
+        await fetchUserData(user.uid);
       } else {
-        setUserRole(null);
+        setSessionRole(null);
         setNeedsPasswordSetup(false);
       }
       setLoading(false);
@@ -85,13 +83,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return unsubscribe;
   }, []);
 
-  const signup = async (email: string, name: string, role: string) => {
+  const signup = async (email: string, name: string, selectedRole: string) => {
     if (!email.toLowerCase().endsWith('@owu.edu')) {
       throw new Error('Only @owu.edu email addresses are allowed to register');
     }
 
     try {
-      // Check if email is already registered
       const usersRef = collection(db, 'users');
       const q = query(usersRef, where('email', '==', email.toLowerCase()));
       const querySnapshot = await getDocs(q);
@@ -99,25 +96,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('This email is already registered');
       }
 
-      // Store signup data in localStorage for later use
-      localStorage.setItem('signupData', JSON.stringify({ email, name, role }));
+      localStorage.setItem('signupData', JSON.stringify({ email, name, selectedRole }));
 
-      // Configure actionCodeSettings according to Firebase requirements
       const actionCodeSettings = {
-        // URL you want to redirect back to. The domain (www.lategrub.shop) for this
-        // URL must be in the authorized domains list in the Firebase Console.
         url: 'https://www.lategrub.shop/complete-signup',
-        // This must be true for email link sign-in
         handleCodeInApp: true,
-        // Don't specify dynamicLinkDomain as it's deprecated
       };
 
-      // Send the sign-in link
       await sendSignInLinkToEmail(auth, email, actionCodeSettings);
       console.log('Verification email sent to:', email);
 
-      // Save the email locally so you don't need to ask the user for it again
-      // if they open the link on the same device.
       window.localStorage.setItem('emailForSignIn', email);
     } catch (error: any) {
       console.error('Signup error:', error);
@@ -125,21 +113,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const completeSignup = async (email: string, password: string, name: string, role: string) => {
+  const completeSignup = async (email: string, password: string, name: string, selectedRole: string) => {
     try {
-      // Create the user with email and password
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
-      // Update user profile
       await updateProfile(userCredential.user, {
         displayName: name
       });
 
-      // Create user document in Firestore
       await setDoc(doc(db, 'users', userCredential.user.uid), {
         name,
         email: email.toLowerCase(),
-        role,
         uid: userCredential.user.uid,
         emailVerified: true,
         createdAt: new Date(),
@@ -149,6 +133,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         displayName: name
       });
 
+      setSessionRole(selectedRole);
       return userCredential.user;
     } catch (error: any) {
       console.error('Complete signup error:', error);
@@ -156,7 +141,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, selectedRole: string) => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       
@@ -164,9 +149,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userDoc = doc(db, 'users', userCredential.user.uid);
       await setDoc(userDoc, { emailVerified: true, updatedAt: new Date() }, { merge: true });
 
-      console.log('Login successful, fetching user role...');
-      await fetchUserRole(userCredential.user.uid);
-      console.log('User role fetched successfully');
+      setSessionRole(selectedRole);
+      await fetchUserData(userCredential.user.uid);
     } catch (error: any) {
       console.error('Login error:', error);
       throw error;
@@ -175,8 +159,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
+      setSessionRole(null); // Clear session role before signing out
       await signOut(auth);
+      window.location.href = '/'; // Force redirect to landing page
     } catch (error) {
+      console.error('Logout error:', error);
       throw error;
     }
   };
@@ -185,64 +172,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return isSignInWithEmailLink(auth, link);
   };
 
-  const signInWithGoogle = async (role: string) => {
+  const signInWithGoogle = async (selectedRole: string) => {
     try {
-      console.log('Starting Google sign-in process...', { role });
+      console.log('Starting Google sign-in process...');
       const provider = new GoogleAuthProvider();
       
-      // Force account selection and restrict to OWU domain
       provider.setCustomParameters({
         prompt: 'select_account',
         hd: 'owu.edu'
       });
 
-      console.log('Initiating Google sign-in popup...');
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
-      console.log('Google sign-in successful:', user.email);
 
-      // Verify email domain
       if (!user.email?.endsWith('@owu.edu')) {
-        console.error('Non-OWU email detected:', user.email);
         await signOut(auth);
         throw new Error('Only @owu.edu email addresses are allowed');
       }
 
-      // Check if user already exists in Firestore
-      console.log('Checking if user exists in Firestore...');
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      
-      if (!userDoc.exists()) {
-        console.log('Creating new user document in Firestore with role:', role);
-        // Create new user document with the specified role
-        await setDoc(doc(db, 'users', user.uid), {
-          name: user.displayName,
-          email: user.email.toLowerCase(),
-          role, // Use the role passed from the signup page
-          uid: user.uid,
-          emailVerified: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          phone: '',
-          address: '',
-          displayName: user.displayName,
-          photoURL: user.photoURL
-        });
-        console.log('User document created successfully');
-        setUserRole(role);
-        // Set needs password setup for new users
-        setNeedsPasswordSetup(true);
-      } else {
-        // For existing users, get their role from Firestore
-        const userData = userDoc.data();
-        console.log('Existing user found with role:', userData.role);
-        setUserRole(userData.role);
-        // Check if existing user needs to set up password
-        setNeedsPasswordSetup(!user.providerData.some(p => p.providerId === 'password'));
+      // Set session role first
+      setSessionRole(selectedRole);
+
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        
+        if (!userDoc.exists()) {
+          // Create new user document with the selected role
+          await setDoc(doc(db, 'users', user.uid), {
+            name: user.displayName,
+            email: user.email.toLowerCase(),
+            uid: user.uid,
+            emailVerified: true,
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            phone: '',
+            address: '',
+            displayName: user.displayName,
+            photoURL: user.photoURL,
+            role: selectedRole // Store the selected role
+          });
+        } else {
+          // Update the existing user's role
+          await setDoc(doc(db, 'users', user.uid), {
+            role: selectedRole,
+            updatedAt: new Date()
+          }, { merge: true });
+        }
+      } catch (firestoreError) {
+        console.error('Firestore operation failed:', firestoreError);
+        throw new Error('Failed to update user profile');
       }
 
-      await fetchUserRole(user.uid);
-      console.log('User role fetched successfully');
+      await fetchUserData(user.uid);
     } catch (error: any) {
       console.error('Google sign in error:', error);
       if (error.code === 'auth/operation-not-allowed') {
@@ -259,7 +240,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const value = {
     user,
-    userRole,
+    sessionRole,
     loading,
     needsPasswordSetup,
     signup,
@@ -267,7 +248,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     login,
     logout,
     isEmailLink,
-    signInWithGoogle
+    signInWithGoogle,
+    setSessionRole
   };
 
   return (
