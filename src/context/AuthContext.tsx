@@ -6,10 +6,8 @@ import {
   signOut,
   onAuthStateChanged,
   signInWithEmailAndPassword,
-  updatePassword,
   createUserWithEmailAndPassword,
   updateProfile,
-  sendEmailVerification,
   sendSignInLinkToEmail,
   isSignInWithEmailLink
 } from 'firebase/auth';

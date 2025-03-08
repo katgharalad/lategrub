@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import PageLayout from '../components/PageLayout';
-import ErrorMessage from '../components/ErrorMessage';
 import { createOrder } from '../lib/firebase';
 
 interface MenuItem {
@@ -51,44 +50,6 @@ interface Location {
   lng: number;
   address: string;
 }
-
-const locations: Location[] = [
-  {
-    id: 'l1',
-    name: 'Building A',
-    lat: 40.7128,
-    lng: -74.0060,
-    address: '123 Main St'
-  },
-  {
-    id: 'l2',
-    name: 'Building B',
-    lat: 40.7129,
-    lng: -74.0061,
-    address: '456 Oak Ave'
-  },
-  {
-    id: 'l3',
-    name: 'Building C',
-    lat: 40.7130,
-    lng: -74.0062,
-    address: '789 Pine Rd'
-  },
-  {
-    id: 'l4',
-    name: 'Building D',
-    lat: 40.7131,
-    lng: -74.0063,
-    address: '321 Elm St'
-  },
-  {
-    id: 'l5',
-    name: 'Building E',
-    lat: 40.7132,
-    lng: -74.0064,
-    address: '654 Maple Dr'
-  }
-];
 
 const commonLocations: Location[] = [
   { 
