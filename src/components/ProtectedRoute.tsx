@@ -9,7 +9,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole }) => {
-  const { user, userRole, loading } = useAuth();
+  const { user, userRole, loading, needsPasswordSetup } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -22,6 +22,10 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole 
 
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (needsPasswordSetup && location.pathname !== '/setup-password') {
+    return <Navigate to="/setup-password" replace />;
   }
 
   if (requiredRole && userRole !== requiredRole) {

@@ -2,13 +2,12 @@ import React, { useRef, useState } from 'react';
 import { uploadProfilePhoto } from '../lib/firebase';
 
 interface ProfilePhotoProps {
-  photoURL?: string;
-  name: string;
   userId: string;
-  onPhotoUpdated: (url: string) => void;
+  currentPhotoURL?: string;
+  onPhotoUpdated: (photoURL: string) => void;
 }
 
-const ProfilePhoto: React.FC<ProfilePhotoProps> = ({ photoURL, name, userId, onPhotoUpdated }) => {
+const ProfilePhoto: React.FC<ProfilePhotoProps> = ({ userId, currentPhotoURL, onPhotoUpdated }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,16 +43,16 @@ const ProfilePhoto: React.FC<ProfilePhotoProps> = ({ photoURL, name, userId, onP
         className="relative w-32 h-32 mb-4 rounded-full overflow-hidden cursor-pointer group"
         onClick={handlePhotoClick}
       >
-        {photoURL ? (
+        {currentPhotoURL ? (
           <img 
-            src={photoURL} 
+            src={currentPhotoURL} 
             alt="Profile" 
             className="w-full h-full object-cover"
           />
         ) : (
           <div className="w-full h-full bg-gray-200 flex items-center justify-center">
             <span className="text-4xl text-gray-400">
-              {name ? name[0].toUpperCase() : '?'}
+              {userId ? userId[0].toUpperCase() : '?'}
             </span>
           </div>
         )}

@@ -2,6 +2,8 @@ import React, { Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import CompleteSignup from './pages/CompleteSignup';
+import SetupPassword from './pages/SetupPassword';
 
 // Lazy load pages
 const LandingPage = React.lazy(() => import('./pages/LandingPage'));
@@ -30,10 +32,18 @@ const App: React.FC = () => {
     <AuthProvider>
       <Suspense fallback={<LoadingFallback />}>
         <Routes>
+          {/* Auth routes - these should come first */}
+          <Route path="/complete-signup" element={<CompleteSignup />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/setup-password" element={
+            <ProtectedRoute>
+              <SetupPassword />
+            </ProtectedRoute>
+          } />
+
           {/* Public routes */}
           <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
 
           {/* Customer routes */}
           <Route
@@ -121,7 +131,7 @@ const App: React.FC = () => {
             }
           />
 
-          {/* Fallback route */}
+          {/* Fallback route should be last */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>

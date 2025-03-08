@@ -73,8 +73,6 @@ export default function Login() {
               </p>
             </div>
 
-            {error && <ErrorMessage message={error} />}
-            
             <form onSubmit={handleLogin} className="space-y-6">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-text-secondary mb-2">
@@ -82,6 +80,7 @@ export default function Login() {
                 </label>
                 <input
                   id="email"
+                  name="email"
                   type="email"
                   required
                   value={email}
@@ -97,18 +96,22 @@ export default function Login() {
                 </label>
                 <input
                   id="password"
+                  name="password"
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full bg-background-dark rounded-xl px-4 py-3 text-text-primary placeholder-text-secondary focus:outline-none focus:ring-2 focus:ring-primary"
                   placeholder="Enter your password"
+                  minLength={6}
                 />
               </div>
 
+              {error && <ErrorMessage message={error} />}
+
               <button
                 type="submit"
-                className="w-full bg-gradient-accent text-white py-3 rounded-xl font-medium shadow-glow hover:scale-105 transition-all"
+                className="w-full bg-gradient-accent text-white py-3 px-6 rounded-xl font-medium shadow-glow hover:scale-105 transition-all"
               >
                 Sign In
               </button>
