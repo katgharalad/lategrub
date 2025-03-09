@@ -54,7 +54,8 @@ const DeliveryDashboard: React.FC = () => {
             createdAt: data.createdAt?.toDate() || new Date(),
             updatedAt: data.updatedAt?.toDate() || new Date(),
             paymentMethod: data.paymentMethod,
-            paymentDetails: data.paymentDetails
+            paymentDetails: data.paymentDetails,
+            notes: data.notes
           } as Order;
         });
         setOrders(newOrders);
@@ -86,7 +87,8 @@ const DeliveryDashboard: React.FC = () => {
             createdAt: data.createdAt?.toDate() || new Date(),
             updatedAt: data.updatedAt?.toDate() || new Date(),
             paymentMethod: data.paymentMethod,
-            paymentDetails: data.paymentDetails
+            paymentDetails: data.paymentDetails,
+            notes: data.notes
           } as Order;
         });
         setActiveOrders(newOrders);

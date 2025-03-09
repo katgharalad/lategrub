@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, doc, getDoc, limit, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, doc, getDoc, limit, getDocs, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../context/AuthContext';
 import PageLayout from '../components/PageLayout';
@@ -189,7 +189,9 @@ const Chat: React.FC = () => {
 
   // Set up real-time messages listener for specific chat
   useEffect(() => {
-    if (!orderId || !user) return;
+    if (!orderId || !user || !participant) return;
+
+    console.log('Setting up message listener for order:', orderId, 'with participant:', participant.id);
 
     const messagesRef = collection(db, 'messages');
     const q = query(
@@ -199,66 +201,114 @@ const Chat: React.FC = () => {
     );
 
     const unsubscribe = onSnapshot(q, async (snapshot) => {
-      const newMessages = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        timestamp: doc.data().timestamp?.toDate() || new Date(),
-      })) as Message[];
-      
-      setMessages(newMessages);
-      setLoading(false);
+      try {
+        console.log('Received messages snapshot:', snapshot.size, 'messages');
+        
+        const newMessages = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          timestamp: doc.data().timestamp?.toDate() || new Date(),
+        })) as Message[];
+        
+        console.log('Processed messages:', newMessages);
+        setMessages(newMessages);
+        setLoading(false);
 
-      // Mark messages as read
-      const batch = writeBatch(db);
-      let hasUnreadMessages = false;
+        // Mark unread messages as read
+        let hasUnreadMessages = false;
 
-      snapshot.docs.forEach(doc => {
-        const messageData = doc.data();
-        if (messageData.recipientId === user.uid && !messageData.read) {
-          hasUnreadMessages = true;
-          batch.update(doc.ref, { read: true });
+        for (const doc of snapshot.docs) {
+          const messageData = doc.data();
+          if (messageData.recipientId === user.uid && !messageData.read) {
+            try {
+              console.log('Marking message as read:', doc.id);
+              await updateDoc(doc.ref, { 
+                read: true,
+                updatedAt: serverTimestamp()
+              });
+              hasUnreadMessages = true;
+            } catch (err) {
+              console.error('Error marking message as read:', doc.id, err);
+            }
+          }
         }
-      });
 
-      if (hasUnreadMessages) {
-        try {
-          await batch.commit();
-        } catch (err) {
-          console.error('Error marking messages as read:', err);
+        if (hasUnreadMessages) {
+          console.log('Successfully marked messages as read');
         }
+      } catch (err) {
+        console.error('Error processing messages:', err);
+        setError('Failed to load messages');
       }
+    }, (error) => {
+      console.error('Error in message listener:', error);
+      setError('Failed to connect to message updates');
     });
 
-    return () => unsubscribe();
-  }, [orderId, user]);
+    return () => {
+      console.log('Cleaning up message listener');
+      unsubscribe();
+    };
+  }, [orderId, user, participant]);
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (messages.length > 0) {
+      console.log('Scrolling to bottom');
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [messages]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !user || !orderId || !participant) return;
+    if (!newMessage.trim() || !user || !orderId || !participant) {
+      console.log('Missing required fields:', {
+        hasMessage: !!newMessage.trim(),
+        hasUser: !!user,
+        hasOrderId: !!orderId,
+        hasParticipant: !!participant
+      });
+      return;
+    }
 
     try {
-      const messagesRef = collection(db, 'messages');
-      await addDoc(messagesRef, {
+      console.log('Sending message:', {
         orderId,
-        text: newMessage.trim(),
-        sender: {
-          id: user.uid,
-          role: sessionRole,
-        },
+        senderId: user.uid,
         recipientId: participant.id,
-        read: false,
-        timestamp: serverTimestamp(),
+        text: newMessage.trim()
       });
 
+      const messagesRef = collection(db, 'messages');
+      const messageData = {
+        orderId,
+        text: newMessage.trim(),
+        senderId: user.uid,
+        recipientId: participant.id,
+        timestamp: serverTimestamp(),
+        read: false,
+        sender: {
+          id: user.uid,
+          name: user.displayName || 'Unknown User',
+          photo: user.photoURL || 'https://via.placeholder.com/40',
+          role: sessionRole
+        },
+        recipient: {
+          id: participant.id,
+          name: participant.name,
+          photo: participant.photo,
+          role: participant.role
+        }
+      };
+
+      await addDoc(messagesRef, messageData);
+      console.log('Message sent successfully');
+
       setNewMessage('');
-    } catch (err) {
-      console.error('Error sending message:', err);
-      setError('Failed to send message');
+      setError(null);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      setError('Failed to send message. Please try again.');
     }
   };
 
@@ -369,7 +419,7 @@ const Chat: React.FC = () => {
         <div className="bg-background-card rounded-t-2xl p-4">
           <div className="flex items-center justify-between">
             <button
-              onClick={() => navigate('/chat')}
+              onClick={() => navigate(sessionRole === 'delivery' ? '/delivery' : '/customer')}
               className="mr-4 text-text-secondary hover:text-text-primary transition-colors"
             >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

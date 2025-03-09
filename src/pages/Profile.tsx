@@ -12,19 +12,17 @@ interface UserProfile {
   email: string;
   phone: string;
   address: string;
-  role: string;
   photoURL?: string;
 }
 
 const Profile: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, sessionRole } = useAuth();
   const navigate = useNavigate();
   const [profile, setProfile] = useState<UserProfile>({
     name: '',
     email: '',
     phone: '',
     address: '',
-    role: '',
     photoURL: ''
   });
   const [isEditing, setIsEditing] = useState(false);
@@ -121,7 +119,17 @@ const Profile: React.FC = () => {
       <div className="max-w-2xl mx-auto mt-8 p-6">
         <div className="bg-background-card rounded-xl p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-text-primary">Profile</h2>
+            <div className="flex items-center">
+              <button
+                onClick={() => navigate(sessionRole === 'delivery' ? '/delivery' : '/customer')}
+                className="mr-4 text-text-secondary hover:text-text-primary transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <h2 className="text-2xl font-bold text-text-primary">Profile</h2>
+            </div>
             <div className="flex items-center space-x-3">
               {!isEditing && (
                 <button
@@ -204,7 +212,7 @@ const Profile: React.FC = () => {
 
             <div>
               <label htmlFor="address" className="block text-sm font-medium text-text-secondary">
-                Delivery Address
+                Default Delivery Address
               </label>
               <input
                 type="text"
@@ -213,25 +221,12 @@ const Profile: React.FC = () => {
                 value={profile.address}
                 onChange={handleChange}
                 disabled={!isEditing}
+                placeholder="Enter your default delivery address"
                 className="mt-1 block w-full rounded-xl bg-background-dark border-0 text-text-primary shadow-sm focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:bg-background-dark/50"
               />
-            </div>
-
-            <div>
-              <label htmlFor="role" className="block text-sm font-medium text-text-secondary">
-                Role
-              </label>
-              <select
-                id="role"
-                name="role"
-                value={profile.role}
-                onChange={handleChange}
-                disabled={!isEditing}
-                className="mt-1 block w-full rounded-xl bg-background-dark border-0 text-text-primary shadow-sm focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:bg-background-dark/50"
-              >
-                <option value="customer">Customer</option>
-                <option value="delivery">Delivery Partner</option>
-              </select>
+              <p className="mt-1 text-sm text-text-secondary">
+                This address will be pre-filled when placing orders, but you can always change it.
+              </p>
             </div>
 
             {isEditing && (

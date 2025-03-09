@@ -57,10 +57,18 @@ const CustomerDashboard: React.FC = () => {
         const data = doc.data();
         return {
           id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate() || new Date()
-        };
-      }) as Order[];
+          customerId: data.customerId || user.uid,
+          deliveryAddress: data.deliveryAddress || '',
+          items: data.items || [],
+          total: data.total || 0,
+          status: data.status || 'ordered',
+          deliveryPersonId: data.deliveryPersonId || null,
+          createdAt: data.createdAt?.toDate() || new Date(),
+          updatedAt: data.updatedAt?.toDate() || new Date(),
+          paymentMethod: data.paymentMethod || 'cash',
+          paymentDetails: data.paymentDetails || ''
+        } as Order;
+      });
       
       setOrders(ordersData);
       setLoading(false);
@@ -80,10 +88,14 @@ const CustomerDashboard: React.FC = () => {
 
   const getOrderProgress = (status: OrderStatus) => {
     const stages: OrderStatus[] = ['ordered', 'waiting', 'got_food', 'walking', 'delivered'];
-    return stages.indexOf(status);
+    const index = stages.indexOf(status);
+    return index >= 0 ? index : 0;
   };
 
-  const activeOrders = orders.filter(order => order.status !== 'delivered');
+  const activeOrders = orders.filter(order => 
+    order.status !== 'delivered' && 
+    ['ordered', 'waiting', 'got_food', 'walking'].includes(order.status)
+  );
 
   const formatOrderTime = (date: Date) => {
     return format(date, 'MMM d, h:mm a');

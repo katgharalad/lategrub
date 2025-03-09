@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, addDoc, collection, updateDoc, doc, setDoc } from 'firebase/firestore';
+import { getFirestore, addDoc, collection, updateDoc, doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const firebaseConfig = {
@@ -47,20 +47,18 @@ export interface OrderItem {
 
 export interface Order {
   id?: string;
+  customerName: string;
   customerId: string;
   deliveryPersonId: string | null;
   status: OrderStatus;
-  items: {
-    id: string;
-    name: string;
-    quantity: number;
-    price: number;
-  }[];
+  items: OrderItem[];
   total: number;
   deliveryAddress: string;
-  paymentMethod: 'cash' | 'barter';
-  paymentDetails: string;
+  notes?: string;
+  paymentMethod?: 'cash' | 'barter';
+  paymentDetails?: string;
   createdAt: any; // Using any for serverTimestamp
+  updatedAt: any;
 }
 
 // Chat types
@@ -106,11 +104,36 @@ export const createUserProfile = async (
   return profile;
 };
 
-export const createOrder = async (order: Omit<Order, 'id'>): Promise<string> => {
+export const createOrder = async (order: {
+  customerId: string;
+  items: Array<{
+    name: string;
+    price: number;
+    quantity: number;
+  }>;
+  total: number;
+  deliveryAddress: string;
+  notes?: string;
+  paymentMethod?: 'cash' | 'barter';
+  paymentDetails?: string;
+}): Promise<string> => {
   try {
     console.log('Creating order in Firebase:', order);
-    const ordersRef = collection(db, 'orders');
-    const docRef = await addDoc(ordersRef, order);
+    
+    // Get user data for customer name
+    const userDoc = await getDoc(doc(db, 'users', order.customerId));
+    const userData = userDoc.data();
+    
+    const orderData = {
+      ...order,
+      customerName: userData?.name || 'Unknown Customer',
+      status: 'ordered' as OrderStatus,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      deliveryPersonId: null
+    };
+
+    const docRef = await addDoc(collection(db, 'orders'), orderData);
     console.log('Order created successfully with ID:', docRef.id);
     return docRef.id;
   } catch (error) {

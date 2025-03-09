@@ -37,20 +37,14 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, isDeliveryView, onAccept, 
   };
 
   const getStatusDisplay = (status: Order['status']) => {
-    switch (status) {
-      case 'ordered':
-        return 'Just Ordered';
-      case 'waiting':
-        return 'Waiting at Restaurant';
-      case 'got_food':
-        return 'Got Food';
-      case 'walking':
-        return 'Walking to You';
-      case 'delivered':
-        return 'Delivered';
-      default:
-        return status.charAt(0).toUpperCase() + status.slice(1);
-    }
+    const statusMap = {
+      ordered: 'Just Ordered',
+      waiting: 'Waiting at Restaurant',
+      got_food: 'Got Food',
+      walking: 'Walking to You',
+      delivered: 'Delivered'
+    };
+    return statusMap[status] || status;
   };
 
   const handleAcceptClick = () => {
@@ -128,6 +122,31 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, isDeliveryView, onAccept, 
           </div>
         </div>
       </div>
+
+      {order.notes && (
+        <div className="bg-background-dark rounded-lg p-4 mb-4">
+          <h4 className="text-sm font-medium mb-2">Special Requests:</h4>
+          <p className="text-sm text-text-secondary">{order.notes}</p>
+        </div>
+      )}
+
+      {order.paymentMethod && (
+        <div className="bg-background-dark rounded-lg p-4 mb-4">
+          <h4 className="text-sm font-medium mb-2">Payment Information:</h4>
+          <div className="space-y-1">
+            <p className="text-sm">
+              <span className="text-text-secondary">Method: </span>
+              <span className="capitalize">{order.paymentMethod}</span>
+            </p>
+            {order.paymentDetails && (
+              <p className="text-sm">
+                <span className="text-text-secondary">Details: </span>
+                {order.paymentDetails}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="flex justify-between gap-2">
         <button

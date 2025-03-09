@@ -4,12 +4,14 @@ import PageLayout from '../components/PageLayout';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/firebase';
 import { Order } from '../lib/firebase';
+import { useNavigate } from 'react-router-dom';
 
 const Orders: React.FC = () => {
   const { user, sessionRole } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!user) {
@@ -127,6 +129,23 @@ const Orders: React.FC = () => {
   return (
     <PageLayout>
       <div className="space-y-6">
+        {/* Header with back button */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <button
+              onClick={() => navigate(sessionRole === 'delivery' ? '/delivery' : '/customer')}
+              className="mr-4 text-text-secondary hover:text-text-primary transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <h1 className="text-2xl font-bold">
+              {sessionRole === 'delivery' ? 'Delivery History' : 'Past Orders'}
+            </h1>
+          </div>
+        </div>
+
         {error && (
           <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4">
             <p className="text-red-400">{error}</p>

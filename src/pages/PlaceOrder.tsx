@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import PageLayout from '../components/PageLayout';
 import { createOrder } from '../lib/firebase';
+import { getDoc, doc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 interface MenuItem {
   id: string;
@@ -101,6 +103,29 @@ const PlaceOrder: React.FC = () => {
   const [showPaymentInput, setShowPaymentInput] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [orderNotes, setOrderNotes] = useState('');
+  const [defaultAddress, setDefaultAddress] = useState('');
+
+  // Fetch user's default address
+  useEffect(() => {
+    if (user) {
+      const fetchUserProfile = async () => {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', user.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            setDefaultAddress(userData.address || '');
+            if (!deliveryAddress && userData.address) {
+              setDeliveryAddress(userData.address);
+            }
+          }
+        } catch (err) {
+          console.error('Error fetching user profile:', err);
+        }
+      };
+      fetchUserProfile();
+    }
+  }, [user]);
 
   const handleLocationSelect = (location: Location) => {
     setSelectedLocation(location);
@@ -168,69 +193,68 @@ const PlaceOrder: React.FC = () => {
   };
 
   const handlePlaceOrder = async () => {
+    if (!user) {
+      setError('Please log in to place an order');
+      return;
+    }
+
+    if (!selectedItems.length) {
+      setError('Please select at least one item');
+      return;
+    }
+
+    if (!deliveryAddress.trim()) {
+      setError('Please enter a delivery address');
+      return;
+    }
+
+    if (!paymentMethod) {
+      setError('Please select a payment method');
+      return;
+    }
+
     try {
       setIsPlacingOrder(true);
-      setError(null);
-
-      // Validate user is logged in
-      if (!user) {
-        setError('You must be logged in to place an order');
-        return;
-      }
-
-      // Validate items are selected
-      if (selectedItems.length === 0) {
-        setError('Please select at least one item');
-        return;
-      }
-
-      // Validate delivery address
-      if (!deliveryAddress) {
-        setError('Please enter a delivery address');
-        return;
-      }
-
-      // Validate payment method and details
-      if (!paymentMethod) {
-        setError('Please select a payment method');
-        return;
-      }
-
-      if (!paymentDetails) {
-        setError('Please enter payment details');
-        return;
-      }
-
       console.log('Starting order creation...');
-      
+
+      const orderItems = selectedItems.map(item => ({
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity
+      }));
+
+      const total = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
       const order = {
         customerId: user.uid,
-        deliveryPersonId: null,
-        status: 'ordered' as const,
-        createdAt: new Date(),
-        items: selectedItems.map(item => ({
-          id: item.id,
-          name: menuItems.find(mi => mi.id === item.id)?.name || '',
-          quantity: item.quantity,
-          price: menuItems.find(mi => mi.id === item.id)?.price || 0
-        })),
-        total: calculateTotal(),
-        deliveryAddress,
+        items: orderItems,
+        total,
+        deliveryAddress: deliveryAddress.trim(),
+        notes: orderNotes.trim() || undefined,
         paymentMethod,
-        paymentDetails
+        paymentDetails: paymentDetails.trim() || undefined
       };
 
       console.log('Order object created:', order);
-      
       const orderId = await createOrder(order);
-      console.log('Order created successfully with ID:', orderId);
-      
-      // Clear cart and redirect to the correct route
+      console.log('Order created with ID:', orderId);
+
+      // Reset form
       setSelectedItems([]);
+      setDeliveryAddress('');
+      setSelectedLocation(null);
+      setRoomNumber('');
+      setOrderNotes('');
+      setPaymentDetails('');
+      setPaymentMethod('cash');
+      setShowPaymentInput(false);
+      setError('');
+
+      // Navigate to customer dashboard
       navigate('/customer');
-    } catch (err) {
-      console.error('Error placing order:', err);
-      setError(err instanceof Error ? err.message : 'Failed to place order. Please try again.');
+    } catch (error: any) {
+      console.error('Error placing order:', error);
+      setError(error.message || 'Failed to place order. Please try again.');
     } finally {
       setIsPlacingOrder(false);
     }
@@ -378,6 +402,22 @@ const PlaceOrder: React.FC = () => {
         <div className="bg-background-card rounded-xl p-4">
           <h2 className="text-xl font-bold mb-4">Delivery Address</h2>
           
+          {defaultAddress && (
+            <div className="mb-4">
+              <button
+                onClick={() => {
+                  setDeliveryAddress(defaultAddress);
+                  setSelectedLocation(null);
+                  setRoomNumber('');
+                }}
+                className="w-full bg-background-dark text-text-primary py-3 px-4 rounded-xl hover:bg-background-dark/70 transition-colors text-left"
+              >
+                <span className="text-sm font-medium text-text-secondary">Use Default Address:</span>
+                <p className="mt-1">{defaultAddress}</p>
+              </button>
+            </div>
+          )}
+          
           {/* Quick Select Locations */}
           <div className="mb-4">
             <h3 className="text-sm font-medium text-text-secondary mb-2">Select Hall</h3>
@@ -423,6 +463,18 @@ const PlaceOrder: React.FC = () => {
               rows={3}
             />
           </div>
+        </div>
+
+        {/* Order Notes */}
+        <div className="bg-background-card rounded-xl p-4">
+          <h2 className="text-xl font-bold mb-4">Special Requests</h2>
+          <textarea
+            value={orderNotes}
+            onChange={(e) => setOrderNotes(e.target.value)}
+            placeholder="Add any special requests, allergies, or preferences (e.g., extra sauce, no onions, etc.)"
+            className="w-full bg-background-dark rounded-lg p-3 text-text-primary placeholder-text-secondary min-h-[100px]"
+            rows={4}
+          />
         </div>
 
         {/* Payment Method */}

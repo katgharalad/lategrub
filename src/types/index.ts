@@ -9,7 +9,7 @@ export interface PaymentDetails {
   status: 'pending' | 'completed';
 }
 
-export type OrderStatus = 'ordered' | 'waiting' | 'picked_up' | 'got_food' | 'walking' | 'delivered';
+export type OrderStatus = 'ordered' | 'waiting' | 'got_food' | 'walking' | 'delivered';
 
 export interface Order {
   id: string;
@@ -22,6 +22,7 @@ export interface Order {
   status: OrderStatus;
   createdAt: Date;
   updatedAt: Date;
-  paymentMethod?: string;
-  paymentDetails?: PaymentDetails;
+  notes?: string;
+  paymentMethod?: 'cash' | 'barter';
+  paymentDetails?: string;
 } 

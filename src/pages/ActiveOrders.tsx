@@ -58,10 +58,18 @@ const ActiveOrders: React.FC = () => {
             console.log('Raw order data:', data);
             return {
               id: doc.id,
-              ...data,
-              createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt)
-            };
-          }) as Order[];
+              customerId: data.customerId || user.uid,
+              deliveryAddress: data.deliveryAddress || '',
+              items: data.items || [],
+              total: data.total || 0,
+              status: data.status || 'ordered',
+              deliveryPersonId: data.deliveryPersonId || null,
+              createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
+              updatedAt: data.updatedAt instanceof Timestamp ? data.updatedAt.toDate() : new Date(data.updatedAt),
+              paymentMethod: data.paymentMethod || 'cash',
+              paymentDetails: data.paymentDetails || ''
+            } as Order;
+          });
           
           // Filter active orders in memory
           const activeOrders = ordersData.filter(order => 
@@ -161,7 +169,7 @@ const ActiveOrders: React.FC = () => {
                     </p>
                   </div>
                   <div className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(order.status)}`}>
-                    {order.status.replace('_', ' ').toUpperCase()}
+                    {(order.status || 'ordered').replace('_', ' ').toUpperCase()}
                   </div>
                 </div>
 
@@ -169,7 +177,7 @@ const ActiveOrders: React.FC = () => {
                 <div className="mb-4">
                   <h4 className="text-sm font-medium text-text-secondary mb-2">Items</h4>
                   <div className="space-y-2">
-                    {order.items.map((item, index) => (
+                    {(order.items || []).map((item, index) => (
                       <div key={index} className="flex justify-between text-sm">
                         <span>{item.name} x{item.quantity}</span>
                         <span>${(item.price * item.quantity).toFixed(2)}</span>
@@ -181,17 +189,17 @@ const ActiveOrders: React.FC = () => {
                 {/* Delivery Address */}
                 <div className="mb-4">
                   <h4 className="text-sm font-medium text-text-secondary mb-2">Delivery Address</h4>
-                  <p className="text-sm">{order.deliveryAddress}</p>
+                  <p className="text-sm">{order.deliveryAddress || 'No address provided'}</p>
                 </div>
 
                 {/* Payment Info */}
                 <div className="mb-4">
                   <h4 className="text-sm font-medium text-text-secondary mb-2">Payment</h4>
                   <div className="flex justify-between text-sm">
-                    <span>{order.paymentMethod.toUpperCase()}</span>
-                    <span>${order.total.toFixed(2)}</span>
+                    <span>{(order.paymentMethod || 'cash').toUpperCase()}</span>
+                    <span>${(order.total || 0).toFixed(2)}</span>
                   </div>
-                  <p className="text-sm text-text-secondary mt-1">{order.paymentDetails}</p>
+                  <p className="text-sm text-text-secondary mt-1">{order.paymentDetails || ''}</p>
                 </div>
 
                 {/* Progress Bar */}
