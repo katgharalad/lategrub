@@ -4,12 +4,12 @@ A modern food delivery application built with React, TypeScript, and Firebase, f
 
 ## Features
 
-- 🌙 Beautiful dark theme UI with energy flow visualizations
-- 🚗 Real-time order tracking
-- 💬 Live chat between customers and delivery personnel
-- 🔐 Secure authentication with Firebase
-- 📱 Responsive design for all devices
-- 🎯 Role-based access control (Customer/Delivery)
+-  Beautiful dark theme UI with energy flow visualizations
+-  Real-time order tracking
+-  Live chat between customers and delivery personnel
+-  Secure authentication with Firebase
+-  Responsive design for all devices
+-  Role-based access control (Customer/Delivery)
 
 ## Tech Stack
 
