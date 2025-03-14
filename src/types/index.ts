@@ -2,6 +2,7 @@ export interface OrderItem {
   name: string;
   price: number;
   quantity: number;
+  icePreference?: 'ice' | 'no-ice';
 }
 
 export interface PaymentDetails {

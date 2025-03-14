@@ -110,16 +110,16 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, isDeliveryView, onAccept, 
         <div className="space-y-2">
           {order.items.map((item: OrderItem, index: number) => (
             <div key={index} className="flex justify-between text-sm">
-              <span>{item.quantity}x {item.name}</span>
-              <span>${(item.price * item.quantity).toFixed(2)}</span>
+              <div className="flex items-center gap-2">
+                <span>{item.quantity}x {item.name}</span>
+                {item.icePreference && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-background-card text-text-secondary">
+                    {item.icePreference}
+                  </span>
+                )}
+              </div>
             </div>
           ))}
-          <div className="border-t border-background-card pt-2 mt-2">
-            <div className="flex justify-between text-sm font-medium">
-              <span>Total</span>
-              <span>${order.total.toFixed(2)}</span>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -140,7 +140,9 @@ const OrderCard: React.FC<OrderCardProps> = ({ order, isDeliveryView, onAccept, 
             </p>
             {order.paymentDetails && (
               <p className="text-sm">
-                <span className="text-text-secondary">Details: </span>
+                <span className="text-text-secondary">
+                  {order.paymentMethod === 'cash' ? 'Amount: $' : 'Barter Details: '}
+                </span>
                 {order.paymentDetails}
               </p>
             )}

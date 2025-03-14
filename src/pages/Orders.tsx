@@ -188,8 +188,12 @@ const Orders: React.FC = () => {
                   <div className="space-y-2">
                     {order.items?.map((item, index) => (
                       <div key={index} className="flex justify-between text-sm">
-                        <span>{item.name} x{item.quantity}</span>
-                        <span>${(item.price * item.quantity).toFixed(2)}</span>
+                        <span>{item.quantity}x {item.name}</span>
+                        {item.icePreference && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-background-card text-text-secondary">
+                            {item.icePreference}
+                          </span>
+                        )}
                       </div>
                     )) || (
                       <p className="text-sm text-text-secondary">No items found</p>

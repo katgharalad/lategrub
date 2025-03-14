@@ -10,39 +10,38 @@ interface MenuItem {
   id: string;
   name: string;
   description: string;
-  price: number;
   category: 'main' | 'drink' | 'side';
 }
 
 const menuItems: MenuItem[] = [
   // Main dishes
-  { id: 'm1', name: 'SMASHED PUB BURGER', description: 'House seasoned smash burger on a pretzel bun, topped with grilled onions, colby jack cheese and garlic aioli', price: 10.35, category: 'main' },
-  { id: 'm2', name: 'SMASHED RODEO BURGER', description: 'House seasoned smash burger on a pretzel bun, topped with crispy onions, hickory BBQ sauce, bacon and cheddar cheese', price: 10.35, category: 'main' },
-  { id: 'm3', name: 'BEYOND PUB BURGER ', description: 'Beyond Burger on a pretzel bun topped with avocado, lettuce, tomato, and a roasted garlic vegan aioli ', price: 10.35, category: 'main' },
-  { id: 'm4', name: 'CHICKEN OR VEGAN TENDERS', description: 'Southern Fried Chicken Tenders or Vegan Tenders with hot sauce, bbq sauce or ranch for dipping', price: 10.35, category: 'main' },
-  { id: 'm5', name: 'BUFFALO CHICKEN SALAD', description: 'Mixed Greens topped with grilled or crispy chicken, cucumbers, carrots, celery and a buffalo ranch dressing', price: 10.35, category: 'main' },
-  { id: 'm6', name: 'HOUSE SALAD', description: 'Mixed greens topped with grilled or crispy chicken, with fresh cucumber, grape tomatoes, red onions, carrots, cheddar cheese and ranch or balsamic dressing', price: 10.35, category: 'main' },
-  { id: 'm7', name: 'BUFFALO RANCH CHICKEN WRAP', description: 'Choose grilled or crispy chicken on a flour tortilla, topped with buffalo ranch dressing, pepper jack cheese, blue cheese crumbles, lettuce and tomatoes', price: 10.35, category: 'main' },
-  { id: 'm8', name: 'NASHVILLE HOT CHICKEN SANDWICH ', description: 'Southern fried chicken on a pretzel bun topped with Nashville hot sauce, sliced pickles boursin and smoked gouda spread and coleslaw', price: 10.35, category: 'main' },
+  { id: 'm1', name: 'SMASHED PUB BURGER', description: 'House seasoned smash burger on a pretzel bun, topped with grilled onions, colby jack cheese and garlic aioli', category: 'main' },
+  { id: 'm2', name: 'SMASHED RODEO BURGER', description: 'House seasoned smash burger on a pretzel bun, topped with crispy onions, hickory BBQ sauce, bacon and cheddar cheese', category: 'main' },
+  { id: 'm3', name: 'BEYOND PUB BURGER ', description: 'Beyond Burger on a pretzel bun topped with avocado, lettuce, tomato, and a roasted garlic vegan aioli ', category: 'main' },
+  { id: 'm4', name: 'CHICKEN OR VEGAN TENDERS', description: 'Southern Fried Chicken Tenders or Vegan Tenders with hot sauce, bbq sauce or ranch for dipping', category: 'main' },
+  { id: 'm5', name: 'BUFFALO CHICKEN SALAD', description: 'Mixed Greens topped with grilled or crispy chicken, cucumbers, carrots, celery and a buffalo ranch dressing', category: 'main' },
+  { id: 'm6', name: 'HOUSE SALAD', description: 'Mixed greens topped with grilled or crispy chicken, with fresh cucumber, grape tomatoes, red onions, carrots, cheddar cheese and ranch or balsamic dressing', category: 'main' },
+  { id: 'm7', name: 'BUFFALO RANCH CHICKEN WRAP', description: 'Choose grilled or crispy chicken on a flour tortilla, topped with buffalo ranch dressing, pepper jack cheese, blue cheese crumbles, lettuce and tomatoes', category: 'main' },
+  { id: 'm8', name: 'NASHVILLE HOT CHICKEN SANDWICH ', description: 'Southern fried chicken on a pretzel bun topped with Nashville hot sauce, sliced pickles boursin and smoked gouda spread and coleslaw', category: 'main' },
   
   // Drinks
-  { id: 'd1', name: 'Pepsi', description: 'Classic cola', price: 2.25, category: 'drink' },
-  { id: 'd2', name: 'Sprite', description: 'Lemon-lime soda', price: 2.25, category: 'drink' },
-  { id: 'd3', name: 'Diet Pepsi', description: 'Diet soda', price: 2.25, category: 'drink' },
-  { id: 'd4', name: 'Root Beer', description: 'Mug Root Beer', price: 2.25, category: 'drink' },
+  { id: 'd1', name: 'Pepsi', description: 'Classic cola', category: 'drink' },
+  { id: 'd2', name: 'Sprite', description: 'Lemon-lime soda', category: 'drink' },
+  { id: 'd3', name: 'Diet Pepsi', description: 'Diet soda', category: 'drink' },
+  { id: 'd4', name: 'Root Beer', description: 'Mug Root Beer', category: 'drink' },
   
   // Sides
-  { id: 's1', name: 'French Fries', description: 'Crispy golden fries', price: 3.10, category: 'side' },
-  { id: 's2', name: 'Side Salad', description: 'Crispy battered onion rings', price: 3.10, category: 'side' },
-  { id: 's3', name: 'Fresh Fruit Cup', description: 'Spicy chicken wings', price: 3.10, category: 'side' },
-  { id: 's4', name: 'Sautéed Vegetable', description: 'Cheese sticks with marinara sauce', price: 3.10, category: 'side' },
+  { id: 's1', name: 'French Fries', description: 'Crispy golden fries', category: 'side' },
+  { id: 's2', name: 'Side Salad', description: 'Crispy battered onion rings', category: 'side' },
+  { id: 's3', name: 'Fresh Fruit Cup', description: 'Spicy chicken wings', category: 'side' },
+  { id: 's4', name: 'Sautéed Vegetable', description: 'Cheese sticks with marinara sauce', category: 'side' },
 ];
 
 interface OrderItem {
   id: string;
   name: string;
-  price: number;
   quantity: number;
+  icePreference?: 'ice' | 'no-ice';
 }
 
 interface Location {
@@ -91,6 +90,87 @@ const commonLocations: Location[] = [
   }
 ];
 
+interface OrderPreviewModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  order: {
+    items: OrderItem[];
+    deliveryAddress: string;
+    paymentMethod: 'cash' | 'barter';
+    paymentDetails: string;
+    notes?: string;
+  };
+}
+
+const OrderPreviewModal: React.FC<OrderPreviewModalProps> = ({ isOpen, onClose, onConfirm, order }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-background-card rounded-xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <h2 className="text-xl font-bold mb-4">Confirm Your Order</h2>
+        
+        {/* Order Items */}
+        <div className="mb-4">
+          <h3 className="font-medium mb-2">Items:</h3>
+          <div className="space-y-2">
+            {order.items.map((item, idx) => (
+              <div key={idx} className="flex justify-between">
+                <span>{item.quantity}x {item.name}</span>
+                {item.icePreference && (
+                  <span className="text-text-secondary">{item.icePreference}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Delivery Address */}
+        <div className="mb-4">
+          <h3 className="font-medium mb-2">Delivery To:</h3>
+          <p className="text-text-secondary">{order.deliveryAddress}</p>
+        </div>
+
+        {/* Payment Info */}
+        <div className="mb-4">
+          <h3 className="font-medium mb-2">Payment:</h3>
+          <p className="capitalize">{order.paymentMethod}</p>
+          {order.paymentDetails && (
+            <p className="text-text-secondary">
+              {order.paymentMethod === 'cash' ? `$${order.paymentDetails}` : order.paymentDetails}
+            </p>
+          )}
+        </div>
+
+        {/* Notes */}
+        {order.notes && (
+          <div className="mb-4">
+            <h3 className="font-medium mb-2">Special Requests:</h3>
+            <p className="text-text-secondary">{order.notes}</p>
+          </div>
+        )}
+
+        {/* Buttons */}
+        <div className="flex gap-2 mt-6">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2 px-4 rounded-lg bg-background-dark text-text-primary hover:bg-background-dark/70 transition-colors"
+          >
+            Edit Order
+          </button>
+          <button
+            onClick={onConfirm}
+            className="flex-1 py-2 px-4 rounded-lg bg-primary text-white hover:bg-primary-dark transition-colors"
+          >
+            Place Order
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const PlaceOrder: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -105,6 +185,7 @@ const PlaceOrder: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [orderNotes, setOrderNotes] = useState('');
   const [defaultAddress, setDefaultAddress] = useState('');
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   // Fetch user's default address
   useEffect(() => {
@@ -155,8 +236,8 @@ const PlaceOrder: React.FC = () => {
       return [...prev, { 
         id: menuItem.id,
         name: menuItem.name,
-        price: menuItem.price,
-        quantity: 1 
+        quantity: 1,
+        ...(menuItem.category === 'drink' && { icePreference: 'ice' })
       }];
     });
   };
@@ -179,17 +260,20 @@ const PlaceOrder: React.FC = () => {
     });
   };
 
+  const handleIcePreference = (itemId: string, preference: 'ice' | 'no-ice') => {
+    setSelectedItems(prev => 
+      prev.map(item => 
+        item.id === itemId 
+          ? { ...item, icePreference: preference }
+          : item
+      )
+    );
+  };
+
   const handlePaymentMethodSelect = (method: 'cash' | 'barter') => {
     setPaymentMethod(method);
     setShowPaymentInput(true);
     setPaymentDetails('');
-  };
-
-  const calculateTotal = () => {
-    return selectedItems.reduce((total, item) => {
-      const menuItem = menuItems.find(mi => mi.id === item.id);
-      return total + (menuItem?.price || 0) * item.quantity;
-    }, 0);
   };
 
   const handlePlaceOrder = async () => {
@@ -208,8 +292,12 @@ const PlaceOrder: React.FC = () => {
       return;
     }
 
-    if (!paymentMethod) {
-      setError('Please select a payment method');
+    setShowPreviewModal(true);
+  };
+
+  const handleConfirmOrder = async () => {
+    if (!user) {
+      setError('Please log in to place an order');
       return;
     }
 
@@ -219,11 +307,12 @@ const PlaceOrder: React.FC = () => {
 
       const orderItems = selectedItems.map(item => ({
         name: item.name,
-        price: item.price,
-        quantity: item.quantity
+        quantity: item.quantity,
+        price: 0,
+        icePreference: item.icePreference
       }));
 
-      const total = orderItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      const total = orderItems.reduce((sum, item) => sum + item.quantity, 0);
 
       const order = {
         customerId: user.uid,
@@ -249,6 +338,7 @@ const PlaceOrder: React.FC = () => {
       setPaymentMethod('cash');
       setShowPaymentInput(false);
       setError('');
+      setShowPreviewModal(false);
 
       // Navigate to customer dashboard
       navigate('/customer');
@@ -275,7 +365,6 @@ const PlaceOrder: React.FC = () => {
                     <div>
                       <h3 className="font-medium">{item.name}</h3>
                       <p className="text-sm text-text-secondary">{item.description}</p>
-                      <p className="text-primary mt-1">${item.price}</p>
                     </div>
                     <div className="flex items-center space-x-2">
                       {selectedItems.find(si => si.id === item.id) ? (
@@ -313,43 +402,69 @@ const PlaceOrder: React.FC = () => {
           <section>
             <h2 className="text-xl font-bold mb-4">Drinks</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {menuItems.filter(item => item.category === 'drink').map(item => (
-                <div key={item.id} className="bg-background-card rounded-xl p-4">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-medium">{item.name}</h3>
-                      <p className="text-sm text-text-secondary">{item.description}</p>
-                      <p className="text-primary mt-1">${item.price}</p>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      {selectedItems.find(si => si.id === item.id) ? (
-                        <>
+              {menuItems.filter(item => item.category === 'drink').map(item => {
+                const selectedItem = selectedItems.find(si => si.id === item.id);
+                return (
+                  <div key={item.id} className="bg-background-card rounded-xl p-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-medium">{item.name}</h3>
+                        <p className="text-sm text-text-secondary">{item.description}</p>
+                        {selectedItem && (
+                          <div className="flex gap-2 mt-2">
+                            <button
+                              onClick={() => handleIcePreference(item.id, 'ice')}
+                              className={`px-3 py-1 rounded-full text-xs ${
+                                selectedItem.icePreference === 'ice'
+                                  ? 'bg-primary text-white'
+                                  : 'bg-background-dark text-text-primary'
+                              }`}
+                            >
+                              Ice
+                            </button>
+                            <button
+                              onClick={() => handleIcePreference(item.id, 'no-ice')}
+                              className={`px-3 py-1 rounded-full text-xs ${
+                                selectedItem.icePreference === 'no-ice'
+                                  ? 'bg-primary text-white'
+                                  : 'bg-background-dark text-text-primary'
+                              }`}
+                            >
+                              No Ice
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {selectedItem ? (
+                          <>
+                            <button
+                              onClick={() => handleQuantityChange(item.id, -1)}
+                              className="w-8 h-8 rounded-full bg-background-dark flex items-center justify-center"
+                            >
+                              -
+                            </button>
+                            <span>{selectedItem.quantity}</span>
+                            <button
+                              onClick={() => handleQuantityChange(item.id, 1)}
+                              className="w-8 h-8 rounded-full bg-primary flex items-center justify-center"
+                            >
+                              +
+                            </button>
+                          </>
+                        ) : (
                           <button
-                            onClick={() => handleQuantityChange(item.id, -1)}
-                            className="w-8 h-8 rounded-full bg-background-dark flex items-center justify-center"
+                            onClick={() => handleItemSelect(item.id)}
+                            className="px-4 py-2 bg-primary rounded-lg text-sm"
                           >
-                            -
+                            Add
                           </button>
-                          <span>{selectedItems.find(si => si.id === item.id)?.quantity}</span>
-                          <button
-                            onClick={() => handleQuantityChange(item.id, 1)}
-                            className="w-8 h-8 rounded-full bg-primary flex items-center justify-center"
-                          >
-                            +
-                          </button>
-                        </>
-                      ) : (
-                        <button
-                          onClick={() => handleItemSelect(item.id)}
-                          className="px-4 py-2 bg-primary rounded-lg text-sm"
-                        >
-                          Add
-                        </button>
-                      )}
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </section>
 
@@ -363,7 +478,6 @@ const PlaceOrder: React.FC = () => {
                     <div>
                       <h3 className="font-medium">{item.name}</h3>
                       <p className="text-sm text-text-secondary">{item.description}</p>
-                      <p className="text-primary mt-1">${item.price}</p>
                     </div>
                     <div className="flex items-center space-x-2">
                       {selectedItems.find(si => si.id === item.id) ? (
@@ -527,7 +641,11 @@ const PlaceOrder: React.FC = () => {
         <div className="bg-background-card rounded-xl p-4">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold">Order Summary</h2>
-            <span className="text-2xl font-bold text-primary">${calculateTotal().toFixed(2)}</span>
+            <span className="text-2xl font-bold text-primary">
+              {paymentMethod === 'cash' ? 
+                (paymentDetails ? `$${paymentDetails}` : 'Enter cash amount') :
+                (paymentDetails ? `Barter: ${paymentDetails}` : 'Enter barter details')}
+            </span>
           </div>
           <button
             onClick={handlePlaceOrder}
@@ -541,6 +659,20 @@ const PlaceOrder: React.FC = () => {
             {isPlacingOrder ? 'Placing Order...' : 'Place Order'}
           </button>
         </div>
+
+        {/* Order Preview Modal */}
+        <OrderPreviewModal
+          isOpen={showPreviewModal}
+          onClose={() => setShowPreviewModal(false)}
+          onConfirm={handleConfirmOrder}
+          order={{
+            items: selectedItems,
+            deliveryAddress,
+            paymentMethod,
+            paymentDetails,
+            notes: orderNotes
+          }}
+        />
       </div>
     </PageLayout>
   );

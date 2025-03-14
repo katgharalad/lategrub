@@ -39,10 +39,9 @@ export interface UserProfile {
 export type OrderStatus = 'ordered' | 'waiting' | 'got_food' | 'walking' | 'delivered';
 
 export interface OrderItem {
-  id: string;
   name: string;
   quantity: number;
-  price: number;
+  icePreference?: 'ice' | 'no-ice';
 }
 
 export interface Order {
@@ -108,8 +107,8 @@ export const createOrder = async (order: {
   customerId: string;
   items: Array<{
     name: string;
-    price: number;
     quantity: number;
+    icePreference?: 'ice' | 'no-ice';
   }>;
   total: number;
   deliveryAddress: string;
@@ -122,16 +121,31 @@ export const createOrder = async (order: {
     
     // Get user data for customer name
     const userDoc = await getDoc(doc(db, 'users', order.customerId));
+    console.log('User document exists:', userDoc.exists());
     const userData = userDoc.data();
+    console.log('User data:', userData);
     
+    // Clean up the order data to ensure no undefined values
     const orderData = {
-      ...order,
-      customerName: userData?.name || 'Unknown Customer',
+      customerId: order.customerId,
+      customerName: userData?.displayName || 'Unknown Customer',
+      items: order.items.map(item => ({
+        name: item.name,
+        quantity: item.quantity,
+        ...(item.icePreference && { icePreference: item.icePreference })
+      })),
+      total: order.total,
+      deliveryAddress: order.deliveryAddress,
       status: 'ordered' as OrderStatus,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-      deliveryPersonId: null
+      deliveryPersonId: null,
+      ...(order.notes && { notes: order.notes }),
+      ...(order.paymentMethod && { paymentMethod: order.paymentMethod }),
+      ...(order.paymentDetails && { paymentDetails: order.paymentDetails })
     };
+    
+    console.log('Cleaned order data:', orderData);
 
     const docRef = await addDoc(collection(db, 'orders'), orderData);
     console.log('Order created successfully with ID:', docRef.id);

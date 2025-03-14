@@ -57,8 +57,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const userDoc = await getDoc(doc(db, 'users', uid));
     if (userDoc.exists()) {
       const userData = userDoc.data();
+      console.log('User data fetched:', userData);
+      console.log('Current session role:', sessionRole);
+      console.log('User role from database:', userData.role);
       // Set the session role from the stored role if not already set
       if (!sessionRole && userData.role) {
+        console.log('Setting session role to:', userData.role);
         setSessionRole(userData.role);
       }
     } else {

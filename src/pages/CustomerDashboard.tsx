@@ -208,7 +208,9 @@ const CustomerDashboard: React.FC = () => {
                         )}
                       </button>
                       <span className="text-text-secondary">
-                        ${order.total.toFixed(2)}
+                        {order.paymentMethod === 'cash' ? 
+                          (order.paymentDetails ? `$${order.paymentDetails}` : 'Cash payment') :
+                          (order.paymentDetails ? `Barter: ${order.paymentDetails}` : 'Barter payment')}
                       </span>
                     </div>
                   </div>
