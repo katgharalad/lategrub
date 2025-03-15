@@ -41,7 +41,6 @@ interface OrderItem {
   id: string;
   name: string;
   quantity: number;
-  icePreference?: 'ice' | 'no-ice';
 }
 
 interface Location {
@@ -97,9 +96,9 @@ interface OrderPreviewModalProps {
   order: {
     items: OrderItem[];
     deliveryAddress: string;
-    paymentMethod: 'cash' | 'barter';
-    paymentDetails: string;
     notes?: string;
+    paymentMethod: 'cash' | 'barter';
+    paymentDetails?: string;
   };
 }
 
@@ -108,51 +107,48 @@ const OrderPreviewModal: React.FC<OrderPreviewModalProps> = ({ isOpen, onClose, 
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-background-card rounded-xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-background-card rounded-xl p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
         <h2 className="text-xl font-bold mb-4">Confirm Your Order</h2>
         
         {/* Order Items */}
-        <div className="mb-4">
-          <h3 className="font-medium mb-2">Items:</h3>
+        <div className="bg-background-dark rounded-lg p-4 mb-4">
+          <h3 className="text-sm font-medium mb-2">Order Items:</h3>
           <div className="space-y-2">
             {order.items.map((item, idx) => (
-              <div key={idx} className="flex justify-between">
+              <div key={idx} className="flex justify-between text-sm">
                 <span>{item.quantity}x {item.name}</span>
-                {item.icePreference && (
-                  <span className="text-text-secondary">{item.icePreference}</span>
-                )}
               </div>
             ))}
           </div>
         </div>
 
         {/* Delivery Address */}
-        <div className="mb-4">
-          <h3 className="font-medium mb-2">Delivery To:</h3>
-          <p className="text-text-secondary">{order.deliveryAddress}</p>
+        <div className="bg-background-dark rounded-lg p-4 mb-4">
+          <h3 className="text-sm font-medium mb-2">Delivery Address:</h3>
+          <p className="text-sm">{order.deliveryAddress}</p>
         </div>
 
-        {/* Payment Info */}
-        <div className="mb-4">
-          <h3 className="font-medium mb-2">Payment:</h3>
-          <p className="capitalize">{order.paymentMethod}</p>
+        {/* Special Requests */}
+        {order.notes && (
+          <div className="bg-background-dark rounded-lg p-4 mb-4">
+            <h3 className="text-sm font-medium mb-2">Special Requests:</h3>
+            <p className="text-sm">{order.notes}</p>
+          </div>
+        )}
+
+        {/* Payment Information */}
+        <div className="bg-background-dark rounded-lg p-4 mb-6">
+          <h3 className="text-sm font-medium mb-2">Payment Information:</h3>
+          <p className="text-sm capitalize">Method: {order.paymentMethod}</p>
           {order.paymentDetails && (
-            <p className="text-text-secondary">
-              {order.paymentMethod === 'cash' ? `$${order.paymentDetails}` : order.paymentDetails}
+            <p className="text-sm mt-1">
+              {order.paymentMethod === 'cash' ? `Amount: $${order.paymentDetails}` : `Barter Details: ${order.paymentDetails}`}
             </p>
           )}
         </div>
 
-        {/* Notes */}
-        {order.notes && (
-          <div className="mb-4">
-            <h3 className="font-medium mb-2">Special Requests:</h3>
-            <p className="text-text-secondary">{order.notes}</p>
-          </div>
-        )}
-
-        {/* Buttons */}
-        <div className="flex gap-2 mt-6">
+        {/* Action Buttons */}
+        <div className="flex gap-3">
           <button
             onClick={onClose}
             className="flex-1 py-2 px-4 rounded-lg bg-background-dark text-text-primary hover:bg-background-dark/70 transition-colors"
@@ -185,7 +181,7 @@ const PlaceOrder: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [orderNotes, setOrderNotes] = useState('');
   const [defaultAddress, setDefaultAddress] = useState('');
-  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   // Fetch user's default address
   useEffect(() => {
@@ -236,8 +232,7 @@ const PlaceOrder: React.FC = () => {
       return [...prev, { 
         id: menuItem.id,
         name: menuItem.name,
-        quantity: 1,
-        ...(menuItem.category === 'drink' && { icePreference: 'ice' })
+        quantity: 1 
       }];
     });
   };
@@ -258,16 +253,6 @@ const PlaceOrder: React.FC = () => {
           : item
       );
     });
-  };
-
-  const handleIcePreference = (itemId: string, preference: 'ice' | 'no-ice') => {
-    setSelectedItems(prev => 
-      prev.map(item => 
-        item.id === itemId 
-          ? { ...item, icePreference: preference }
-          : item
-      )
-    );
   };
 
   const handlePaymentMethodSelect = (method: 'cash' | 'barter') => {
@@ -292,7 +277,8 @@ const PlaceOrder: React.FC = () => {
       return;
     }
 
-    setShowPreviewModal(true);
+    // Show preview instead of placing order immediately
+    setShowPreview(true);
   };
 
   const handleConfirmOrder = async () => {
@@ -307,22 +293,25 @@ const PlaceOrder: React.FC = () => {
 
       const orderItems = selectedItems.map(item => ({
         name: item.name,
-        quantity: item.quantity,
-        price: 0,
-        icePreference: item.icePreference
+        quantity: item.quantity
       }));
-
-      const total = orderItems.reduce((sum, item) => sum + item.quantity, 0);
 
       const order = {
         customerId: user.uid,
         items: orderItems,
-        total,
-        deliveryAddress: deliveryAddress.trim(),
-        notes: orderNotes.trim() || undefined,
-        paymentMethod,
-        paymentDetails: paymentDetails.trim() || undefined
-      };
+        deliveryAddress: deliveryAddress.trim()
+      } as any;
+
+      // Only add optional fields if they have content
+      if (orderNotes.trim()) {
+        order.notes = orderNotes.trim();
+      }
+
+      // Add payment info
+      order.paymentMethod = paymentMethod;
+      if (paymentDetails.trim()) {
+        order.paymentDetails = paymentDetails.trim();
+      }
 
       console.log('Order object created:', order);
       const orderId = await createOrder(order);
@@ -338,7 +327,7 @@ const PlaceOrder: React.FC = () => {
       setPaymentMethod('cash');
       setShowPaymentInput(false);
       setError('');
-      setShowPreviewModal(false);
+      setShowPreview(false);
 
       // Navigate to customer dashboard
       navigate('/customer');
@@ -402,69 +391,42 @@ const PlaceOrder: React.FC = () => {
           <section>
             <h2 className="text-xl font-bold mb-4">Drinks</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {menuItems.filter(item => item.category === 'drink').map(item => {
-                const selectedItem = selectedItems.find(si => si.id === item.id);
-                return (
-                  <div key={item.id} className="bg-background-card rounded-xl p-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="font-medium">{item.name}</h3>
-                        <p className="text-sm text-text-secondary">{item.description}</p>
-                        {selectedItem && (
-                          <div className="flex gap-2 mt-2">
-                            <button
-                              onClick={() => handleIcePreference(item.id, 'ice')}
-                              className={`px-3 py-1 rounded-full text-xs ${
-                                selectedItem.icePreference === 'ice'
-                                  ? 'bg-primary text-white'
-                                  : 'bg-background-dark text-text-primary'
-                              }`}
-                            >
-                              Ice
-                            </button>
-                            <button
-                              onClick={() => handleIcePreference(item.id, 'no-ice')}
-                              className={`px-3 py-1 rounded-full text-xs ${
-                                selectedItem.icePreference === 'no-ice'
-                                  ? 'bg-primary text-white'
-                                  : 'bg-background-dark text-text-primary'
-                              }`}
-                            >
-                              No Ice
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        {selectedItem ? (
-                          <>
-                            <button
-                              onClick={() => handleQuantityChange(item.id, -1)}
-                              className="w-8 h-8 rounded-full bg-background-dark flex items-center justify-center"
-                            >
-                              -
-                            </button>
-                            <span>{selectedItem.quantity}</span>
-                            <button
-                              onClick={() => handleQuantityChange(item.id, 1)}
-                              className="w-8 h-8 rounded-full bg-primary flex items-center justify-center"
-                            >
-                              +
-                            </button>
-                          </>
-                        ) : (
+              {menuItems.filter(item => item.category === 'drink').map(item => (
+                <div key={item.id} className="bg-background-card rounded-xl p-4">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-medium">{item.name}</h3>
+                      <p className="text-sm text-text-secondary">{item.description}</p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      {selectedItems.find(si => si.id === item.id) ? (
+                        <>
                           <button
-                            onClick={() => handleItemSelect(item.id)}
-                            className="px-4 py-2 bg-primary rounded-lg text-sm"
+                            onClick={() => handleQuantityChange(item.id, -1)}
+                            className="w-8 h-8 rounded-full bg-background-dark flex items-center justify-center"
                           >
-                            Add
+                            -
                           </button>
-                        )}
-                      </div>
+                          <span>{selectedItems.find(si => si.id === item.id)?.quantity}</span>
+                          <button
+                            onClick={() => handleQuantityChange(item.id, 1)}
+                            className="w-8 h-8 rounded-full bg-primary flex items-center justify-center"
+                          >
+                            +
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={() => handleItemSelect(item.id)}
+                          className="px-4 py-2 bg-primary rounded-lg text-sm"
+                        >
+                          Add
+                        </button>
+                      )}
                     </div>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           </section>
 
@@ -637,7 +599,21 @@ const PlaceOrder: React.FC = () => {
           </div>
         )}
 
-        {/* Order Summary and Place Order Button */}
+        {/* Order Preview Modal */}
+        <OrderPreviewModal
+          isOpen={showPreview}
+          onClose={() => setShowPreview(false)}
+          onConfirm={handleConfirmOrder}
+          order={{
+            items: selectedItems,
+            deliveryAddress,
+            notes: orderNotes,
+            paymentMethod,
+            paymentDetails
+          }}
+        />
+
+        {/* Place Order Button */}
         <div className="bg-background-card rounded-xl p-4">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold">Order Summary</h2>
@@ -656,23 +632,9 @@ const PlaceOrder: React.FC = () => {
                 : 'bg-blue-600 hover:bg-blue-700'
             }`}
           >
-            {isPlacingOrder ? 'Placing Order...' : 'Place Order'}
+            {isPlacingOrder ? 'Placing Order...' : 'Review Order'}
           </button>
         </div>
-
-        {/* Order Preview Modal */}
-        <OrderPreviewModal
-          isOpen={showPreviewModal}
-          onClose={() => setShowPreviewModal(false)}
-          onConfirm={handleConfirmOrder}
-          order={{
-            items: selectedItems,
-            deliveryAddress,
-            paymentMethod,
-            paymentDetails,
-            notes: orderNotes
-          }}
-        />
       </div>
     </PageLayout>
   );

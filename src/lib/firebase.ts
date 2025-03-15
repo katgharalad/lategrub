@@ -41,7 +41,6 @@ export type OrderStatus = 'ordered' | 'waiting' | 'got_food' | 'walking' | 'deli
 export interface OrderItem {
   name: string;
   quantity: number;
-  icePreference?: 'ice' | 'no-ice';
 }
 
 export interface Order {
@@ -51,10 +50,9 @@ export interface Order {
   deliveryPersonId: string | null;
   status: OrderStatus;
   items: OrderItem[];
-  total: number;
   deliveryAddress: string;
   notes?: string;
-  paymentMethod?: 'cash' | 'barter';
+  paymentMethod: 'cash' | 'barter';
   paymentDetails?: string;
   createdAt: any; // Using any for serverTimestamp
   updatedAt: any;
@@ -108,12 +106,10 @@ export const createOrder = async (order: {
   items: Array<{
     name: string;
     quantity: number;
-    icePreference?: 'ice' | 'no-ice';
   }>;
-  total: number;
   deliveryAddress: string;
   notes?: string;
-  paymentMethod?: 'cash' | 'barter';
+  paymentMethod: 'cash' | 'barter';
   paymentDetails?: string;
 }): Promise<string> => {
   try {
@@ -121,31 +117,27 @@ export const createOrder = async (order: {
     
     // Get user data for customer name
     const userDoc = await getDoc(doc(db, 'users', order.customerId));
-    console.log('User document exists:', userDoc.exists());
     const userData = userDoc.data();
-    console.log('User data:', userData);
     
-    // Clean up the order data to ensure no undefined values
     const orderData = {
       customerId: order.customerId,
-      customerName: userData?.displayName || 'Unknown Customer',
-      items: order.items.map(item => ({
-        name: item.name,
-        quantity: item.quantity,
-        ...(item.icePreference && { icePreference: item.icePreference })
-      })),
-      total: order.total,
+      items: order.items,
       deliveryAddress: order.deliveryAddress,
+      paymentMethod: order.paymentMethod,
+      customerName: userData?.displayName || 'Unknown Customer',
       status: 'ordered' as OrderStatus,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-      deliveryPersonId: null,
-      ...(order.notes && { notes: order.notes }),
-      ...(order.paymentMethod && { paymentMethod: order.paymentMethod }),
-      ...(order.paymentDetails && { paymentDetails: order.paymentDetails })
-    };
-    
-    console.log('Cleaned order data:', orderData);
+      deliveryPersonId: null
+    } as any;
+
+    // Only add optional fields if they exist
+    if (order.notes) {
+      orderData.notes = order.notes;
+    }
+    if (order.paymentDetails) {
+      orderData.paymentDetails = order.paymentDetails;
+    }
 
     const docRef = await addDoc(collection(db, 'orders'), orderData);
     console.log('Order created successfully with ID:', docRef.id);

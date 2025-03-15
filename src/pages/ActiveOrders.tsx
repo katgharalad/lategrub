@@ -59,9 +59,9 @@ const ActiveOrders: React.FC = () => {
             return {
               id: doc.id,
               customerId: data.customerId || user.uid,
+              customerName: data.customerName || 'Unknown Customer',
               deliveryAddress: data.deliveryAddress || '',
               items: data.items || [],
-              total: data.total || 0,
               status: data.status || 'ordered',
               deliveryPersonId: data.deliveryPersonId || null,
               createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(data.createdAt),
@@ -177,16 +177,13 @@ const ActiveOrders: React.FC = () => {
                 <div className="mb-4">
                   <h4 className="text-sm font-medium text-text-secondary mb-2">Items</h4>
                   <div className="space-y-2">
-                    {(order.items || []).map((item, index) => (
+                    {order.items?.map((item, index) => (
                       <div key={index} className="flex justify-between text-sm">
-                        <span>{item.quantity}x {item.name}</span>
-                        {item.icePreference && (
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-background-card text-text-secondary">
-                            {item.icePreference}
-                          </span>
-                        )}
+                        <span>{item.name} x{item.quantity}</span>
                       </div>
-                    ))}
+                    )) || (
+                      <p className="text-sm text-text-secondary">No items found</p>
+                    )}
                   </div>
                 </div>
 
@@ -201,7 +198,10 @@ const ActiveOrders: React.FC = () => {
                   <h4 className="text-sm font-medium text-text-secondary mb-2">Payment</h4>
                   <div className="flex justify-between text-sm">
                     <span>{(order.paymentMethod || 'cash').toUpperCase()}</span>
-                    <span>${(order.total || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Total Items:</span>
+                    <span>{order.items.reduce((sum, item) => sum + item.quantity, 0)}</span>
                   </div>
                   <p className="text-sm text-text-secondary mt-1">{order.paymentDetails || ''}</p>
                 </div>

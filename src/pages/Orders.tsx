@@ -68,14 +68,15 @@ const Orders: React.FC = () => {
             return {
               id: doc.id,
               customerId: data.customerId || '',
+              customerName: data.customerName || 'Unknown Customer',
               deliveryPersonId: data.deliveryPersonId || null,
               status: data.status || 'delivered',
               items: data.items || [],
-              total: data.total || 0,
               deliveryAddress: data.deliveryAddress || '',
               paymentMethod: data.paymentMethod || 'cash',
               paymentDetails: data.paymentDetails || '',
-              createdAt
+              createdAt,
+              updatedAt: data.updatedAt?.toDate() || createdAt
             } as Order;
           });
           
@@ -188,12 +189,7 @@ const Orders: React.FC = () => {
                   <div className="space-y-2">
                     {order.items?.map((item, index) => (
                       <div key={index} className="flex justify-between text-sm">
-                        <span>{item.quantity}x {item.name}</span>
-                        {item.icePreference && (
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-background-card text-text-secondary">
-                            {item.icePreference}
-                          </span>
-                        )}
+                        <span>{item.name} x{item.quantity}</span>
                       </div>
                     )) || (
                       <p className="text-sm text-text-secondary">No items found</p>
@@ -212,9 +208,8 @@ const Orders: React.FC = () => {
                   <h4 className="text-sm font-medium text-text-secondary mb-2">Payment</h4>
                   <div className="flex justify-between text-sm">
                     <span>{(order.paymentMethod || 'Unknown').toUpperCase()}</span>
-                    <span>${(order.total || 0).toFixed(2)}</span>
+                    <span>{order.paymentDetails || 'No payment details'}</span>
                   </div>
-                  <p className="text-sm text-text-secondary mt-1">{order.paymentDetails || 'No payment details'}</p>
                 </div>
 
                 {/* Show delivery person for customers, show customer for delivery person */}

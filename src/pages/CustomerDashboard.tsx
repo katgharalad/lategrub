@@ -58,9 +58,9 @@ const CustomerDashboard: React.FC = () => {
         return {
           id: doc.id,
           customerId: data.customerId || user.uid,
+          customerName: data.customerName || 'Unknown Customer',
           deliveryAddress: data.deliveryAddress || '',
           items: data.items || [],
-          total: data.total || 0,
           status: data.status || 'ordered',
           deliveryPersonId: data.deliveryPersonId || null,
           createdAt: data.createdAt?.toDate() || new Date(),
