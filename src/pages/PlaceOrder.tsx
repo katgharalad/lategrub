@@ -41,6 +41,8 @@ interface OrderItem {
   id: string;
   name: string;
   quantity: number;
+  icePreference?: 'ice' | 'no_ice';
+  tenderType?: 'chicken' | 'vegan';
 }
 
 interface Location {
@@ -107,60 +109,74 @@ const OrderPreviewModal: React.FC<OrderPreviewModalProps> = ({ isOpen, onClose, 
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-background-card rounded-xl p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-xl font-bold mb-4">Confirm Your Order</h2>
+      <div className="bg-background-card rounded-xl p-6 max-w-md w-full mx-4">
+        <h2 className="text-xl font-bold mb-4">Order Preview</h2>
         
-        {/* Order Items */}
-        <div className="bg-background-dark rounded-lg p-4 mb-4">
-          <h3 className="text-sm font-medium mb-2">Order Items:</h3>
-          <div className="space-y-2">
-            {order.items.map((item, idx) => (
-              <div key={idx} className="flex justify-between text-sm">
-                <span>{item.quantity}x {item.name}</span>
-              </div>
-            ))}
+        <div className="space-y-4">
+          <div>
+            <h3 className="font-medium mb-2">Items</h3>
+            <div className="space-y-2">
+              {order.items.map((item, index) => (
+                <div key={index} className="flex justify-between items-center">
+                  <div>
+                    <span className="font-medium">{item.name}</span>
+                    {item.icePreference && (
+                      <span className="text-sm text-text-secondary ml-2">
+                        ({item.icePreference === 'ice' ? 'With Ice' : 'No Ice'})
+                      </span>
+                    )}
+                    {item.tenderType && (
+                      <span className="text-sm text-text-secondary ml-2">
+                        ({item.tenderType.charAt(0).toUpperCase() + item.tenderType.slice(1)})
+                      </span>
+                    )}
+                  </div>
+                  <span>x{item.quantity}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Delivery Address */}
-        <div className="bg-background-dark rounded-lg p-4 mb-4">
-          <h3 className="text-sm font-medium mb-2">Delivery Address:</h3>
-          <p className="text-sm">{order.deliveryAddress}</p>
-        </div>
-
-        {/* Special Requests */}
-        {order.notes && (
+          {/* Delivery Address */}
           <div className="bg-background-dark rounded-lg p-4 mb-4">
-            <h3 className="text-sm font-medium mb-2">Special Requests:</h3>
-            <p className="text-sm">{order.notes}</p>
+            <h3 className="text-sm font-medium mb-2">Delivery Address:</h3>
+            <p className="text-sm">{order.deliveryAddress}</p>
           </div>
-        )}
 
-        {/* Payment Information */}
-        <div className="bg-background-dark rounded-lg p-4 mb-6">
-          <h3 className="text-sm font-medium mb-2">Payment Information:</h3>
-          <p className="text-sm capitalize">Method: {order.paymentMethod}</p>
-          {order.paymentDetails && (
-            <p className="text-sm mt-1">
-              {order.paymentMethod === 'cash' ? `Amount: $${order.paymentDetails}` : `Barter Details: ${order.paymentDetails}`}
-            </p>
+          {/* Special Requests */}
+          {order.notes && (
+            <div className="bg-background-dark rounded-lg p-4 mb-4">
+              <h3 className="text-sm font-medium mb-2">Special Requests:</h3>
+              <p className="text-sm">{order.notes}</p>
+            </div>
           )}
-        </div>
 
-        {/* Action Buttons */}
-        <div className="flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 py-2 px-4 rounded-lg bg-background-dark text-text-primary hover:bg-background-dark/70 transition-colors"
-          >
-            Edit Order
-          </button>
-          <button
-            onClick={onConfirm}
-            className="flex-1 py-2 px-4 rounded-lg bg-primary text-white hover:bg-primary-dark transition-colors"
-          >
-            Place Order
-          </button>
+          {/* Payment Information */}
+          <div className="bg-background-dark rounded-lg p-4 mb-6">
+            <h3 className="text-sm font-medium mb-2">Payment Information:</h3>
+            <p className="text-sm capitalize">Method: {order.paymentMethod}</p>
+            {order.paymentDetails && (
+              <p className="text-sm mt-1">
+                {order.paymentMethod === 'cash' ? `Amount: $${order.paymentDetails}` : `Barter Details: ${order.paymentDetails}`}
+              </p>
+            )}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="flex-1 py-2 px-4 rounded-lg bg-background-dark text-text-primary hover:bg-background-dark/70 transition-colors"
+            >
+              Edit Order
+            </button>
+            <button
+              onClick={onConfirm}
+              className="flex-1 py-2 px-4 rounded-lg bg-primary text-white hover:bg-primary-dark transition-colors"
+            >
+              Place Order
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -217,22 +233,46 @@ const PlaceOrder: React.FC = () => {
     }
   };
 
-  const handleItemSelect = (itemId: string) => {
+  const handleItemSelect = (itemId: string, icePreference?: 'ice' | 'no_ice', tenderType?: 'chicken' | 'vegan') => {
     setSelectedItems(prev => {
       const existing = prev.find(item => item.id === itemId);
+      
       if (existing) {
+        // If item exists and we're updating ice preference or tender type
+        if (icePreference || tenderType) {
+          return prev.map(item => 
+            item.id === itemId
+              ? { 
+                  ...item, 
+                  icePreference: icePreference || item.icePreference,
+                  tenderType: tenderType || item.tenderType,
+                  name: tenderType 
+                    ? `CHICKEN OR VEGAN TENDERS (${tenderType.charAt(0).toUpperCase() + tenderType.slice(1)})`
+                    : item.name
+                }
+              : item
+          );
+        }
+        // If item exists and we're just adding quantity
         return prev.map(item => 
-          item.id === itemId 
+          item.id === itemId
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       }
+
+      // If item doesn't exist, create new item
       const menuItem = menuItems.find(item => item.id === itemId);
       if (!menuItem) return prev;
+      
       return [...prev, { 
         id: menuItem.id,
-        name: menuItem.name,
-        quantity: 1 
+        name: tenderType 
+          ? `${menuItem.name} (${tenderType.charAt(0).toUpperCase() + tenderType.slice(1)})`
+          : menuItem.name,
+        quantity: 1,
+        icePreference: menuItem.category === 'drink' ? (icePreference || 'ice') : undefined,
+        tenderType: tenderType
       }];
     });
   };
@@ -291,16 +331,33 @@ const PlaceOrder: React.FC = () => {
       setIsPlacingOrder(true);
       console.log('Starting order creation...');
 
-      const orderItems = selectedItems.map(item => ({
-        name: item.name,
-        quantity: item.quantity
-      }));
+      const orderItems = selectedItems.map(item => {
+        const cleanItem: any = {
+          name: item.name,
+          quantity: item.quantity
+        };
+        
+        // Only add icePreference if it exists
+        if (item.icePreference) {
+          cleanItem.icePreference = item.icePreference;
+        }
+        
+        // Only add tenderType if it exists
+        if (item.tenderType) {
+          cleanItem.tenderType = item.tenderType;
+        }
+        
+        return cleanItem;
+      });
 
-      const order = {
+      const order: any = {
         customerId: user.uid,
         items: orderItems,
-        deliveryAddress: deliveryAddress.trim()
-      } as any;
+        deliveryAddress: deliveryAddress.trim(),
+        status: 'ordered',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
 
       // Only add optional fields if they have content
       if (orderNotes.trim()) {
@@ -350,14 +407,14 @@ const PlaceOrder: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {menuItems.filter(item => item.category === 'main').map(item => (
                 <div key={item.id} className="bg-background-card rounded-xl p-4">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-medium">{item.name}</h3>
-                      <p className="text-sm text-text-secondary">{item.description}</p>
-                    </div>
-                    <div className="flex items-center space-x-2">
+                  <div className="flex flex-col space-y-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-medium">{item.name}</h3>
+                        <p className="text-sm text-text-secondary">{item.description}</p>
+                      </div>
                       {selectedItems.find(si => si.id === item.id) ? (
-                        <>
+                        <div className="flex items-center space-x-2">
                           <button
                             onClick={() => handleQuantityChange(item.id, -1)}
                             className="w-8 h-8 rounded-full bg-background-dark flex items-center justify-center"
@@ -371,16 +428,44 @@ const PlaceOrder: React.FC = () => {
                           >
                             +
                           </button>
-                        </>
+                        </div>
                       ) : (
                         <button
                           onClick={() => handleItemSelect(item.id)}
-                          className="px-4 py-2 bg-primary rounded-lg text-sm"
+                          className="px-4 py-2 bg-primary rounded-lg text-sm text-white hover:bg-primary-dark transition-colors"
                         >
                           Add
                         </button>
                       )}
                     </div>
+                    
+                    {selectedItems.find(si => si.id === item.id) && item.id === 'm4' && (
+                      <div className="flex items-center space-x-2 text-sm">
+                        <span className="text-text-secondary">Type:</span>
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => handleItemSelect(item.id, undefined, 'chicken')}
+                            className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+                              selectedItems.find(si => si.id === item.id)?.tenderType === 'chicken'
+                                ? 'bg-primary text-white'
+                                : 'bg-background-dark text-text-primary hover:bg-background-hover'
+                            }`}
+                          >
+                            Chicken
+                          </button>
+                          <button
+                            onClick={() => handleItemSelect(item.id, undefined, 'vegan')}
+                            className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+                              selectedItems.find(si => si.id === item.id)?.tenderType === 'vegan'
+                                ? 'bg-primary text-white'
+                                : 'bg-background-dark text-text-primary hover:bg-background-hover'
+                            }`}
+                          >
+                            Vegan
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -393,14 +478,14 @@ const PlaceOrder: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {menuItems.filter(item => item.category === 'drink').map(item => (
                 <div key={item.id} className="bg-background-card rounded-xl p-4">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-medium">{item.name}</h3>
-                      <p className="text-sm text-text-secondary">{item.description}</p>
-                    </div>
-                    <div className="flex items-center space-x-2">
+                  <div className="flex flex-col space-y-3">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-medium">{item.name}</h3>
+                        <p className="text-sm text-text-secondary">{item.description}</p>
+                      </div>
                       {selectedItems.find(si => si.id === item.id) ? (
-                        <>
+                        <div className="flex items-center space-x-2">
                           <button
                             onClick={() => handleQuantityChange(item.id, -1)}
                             className="w-8 h-8 rounded-full bg-background-dark flex items-center justify-center"
@@ -414,16 +499,44 @@ const PlaceOrder: React.FC = () => {
                           >
                             +
                           </button>
-                        </>
+                        </div>
                       ) : (
                         <button
-                          onClick={() => handleItemSelect(item.id)}
-                          className="px-4 py-2 bg-primary rounded-lg text-sm"
+                          onClick={() => handleItemSelect(item.id, 'ice')}
+                          className="px-4 py-2 bg-primary rounded-lg text-sm text-white hover:bg-primary-dark transition-colors"
                         >
                           Add
                         </button>
                       )}
                     </div>
+                    
+                    {selectedItems.find(si => si.id === item.id) && (
+                      <div className="flex items-center space-x-2 text-sm">
+                        <span className="text-text-secondary">Ice:</span>
+                        <div className="flex space-x-1">
+                          <button
+                            onClick={() => handleItemSelect(item.id, 'ice')}
+                            className={`px-3 py-1 rounded-full text-xs transition-colors ${
+                              selectedItems.find(si => si.id === item.id)?.icePreference === 'ice'
+                                ? 'bg-primary text-white'
+                                : 'bg-background-dark text-text-primary hover:bg-background-hover'
+                            }`}
+                          >
+                            With Ice
+                          </button>
+                          <button
+                            onClick={() => handleItemSelect(item.id, 'no_ice')}
+                            className={`px-3 py-1 rounded-full text-xs transition-colors ${
+                              selectedItems.find(si => si.id === item.id)?.icePreference === 'no_ice'
+                                ? 'bg-primary text-white'
+                                : 'bg-background-dark text-text-primary hover:bg-background-hover'
+                            }`}
+                          >
+                            No Ice
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
