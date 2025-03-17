@@ -123,11 +123,11 @@ const CustomerDashboard: React.FC = () => {
         <div className="grid grid-cols-3 gap-4">
           <button
             onClick={() => navigate('/place-order')}
-            className="bg-background-card rounded-xl p-4 hover:bg-background-dark transition-colors text-left"
+            className="bg-primary rounded-xl p-4 hover:bg-primary-dark transition-colors text-left text-white"
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium text-text-secondary">Place New Order</h3>
-              <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <h3 className="text-sm font-medium">Place New Order</h3>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
             </div>

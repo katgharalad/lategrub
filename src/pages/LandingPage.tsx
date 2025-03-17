@@ -44,8 +44,17 @@ export default function LandingPage() {
 
         {/* Main Content */}
         <div className="relative z-10 flex flex-col items-center space-y-8 px-4">
-          {/* Logo */}
-          <div className="bg-background-card/50 backdrop-blur-md rounded-xl border border-primary/30 p-8 shadow-float mb-8">
+          {/* OWU Logo */}
+          <div className="mb-8">
+            <img 
+              src="/owu.png" 
+              alt="OWU Logo" 
+              className="h-40 w-auto object-contain"
+            />
+          </div>
+          
+          {/* LateGrub Logo */}
+          <div className="bg-background-card/50 backdrop-blur-md rounded-xl border border-primary/30 p-8 shadow-float">
             <div className="flex items-center gap-3">
               <Utensils className="w-8 h-8 text-primary" />
               <h1 className="text-4xl font-display font-bold gradient-text">LateGrub</h1>
@@ -56,7 +65,7 @@ export default function LandingPage() {
           <div className="flex flex-col items-center space-y-4">
             <button 
               onClick={handleCustomerMode}
-              className="w-64 bg-gradient-accent text-white py-3 px-6 rounded-xl font-medium shadow-glow hover:scale-105 transition-all"
+              className="w-64 bg-gradient-accent text-black font-semibold py-3 px-6 rounded-xl shadow-glow hover:scale-105 transition-all"
             >
               {user ? 'Order Food' : 'I Want to Order'}
             </button>
