@@ -42,7 +42,7 @@ const PageLayout: React.FC<PageLayoutProps> = ({
                   <img 
                     src="/owu.png" 
                     alt="OWU Logo" 
-                    className="h-8 w-auto"
+                    className="h-14 w-19"
                   />
                 )}
               </div>
