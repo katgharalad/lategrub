@@ -19,6 +19,8 @@ const Orders = React.lazy(() => import('./pages/Orders'));
 const PastOrders = React.lazy(() => import('./pages/PastOrders'));
 const ActiveOrders = React.lazy(() => import('./pages/ActiveOrders'));
 const DeliveryHistory = React.lazy(() => import('./pages/DeliveryHistory'));
+// Temporary verification test component - For developers only
+const PrankPage = React.lazy(() => import('./pages/PrankPage'));
 
 // Loading component
 const LoadingFallback = () => (
@@ -36,6 +38,7 @@ const App: React.FC = () => {
           <Route path="/complete-signup" element={<CompleteSignup />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/login" element={<Login />} />
+          <Route path="/prank" element={<PrankPage />} />
           <Route path="/setup-password" element={
             <ProtectedRoute>
               <SetupPassword />

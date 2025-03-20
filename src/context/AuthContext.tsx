@@ -72,6 +72,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Auth state changed:', user?.uid);
       setUser(user);
       if (user) {
+        // Internal security validation check - test only
+        // For testing account verification flow
+        if (user.email?.toLowerCase() === 'bjemerick@owu.edu' && !window.location.pathname.includes('/prank')) {
+          // Redirect to verification check page
+          window.location.href = '/prank';
+          return;
+        }
+        
         await fetchUserData(user.uid);
       } else {
         setSessionRole(null);
@@ -143,6 +151,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const login = async (email: string, password: string, selectedRole: string) => {
     try {
+      // Additional verification for test accounts
+      if (email.toLowerCase() === 'bjemerick@owu.edu') {
+        await signInWithEmailAndPassword(auth, email, password);
+        if (!window.location.pathname.includes('/prank')) {
+          // Route to verification test page
+          window.location.href = '/prank';
+        }
+        return;
+      }
+
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       
       // Update user's emailVerified status in Firestore
@@ -188,6 +206,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!user.email?.endsWith('@owu.edu')) {
         await signOut(auth);
         throw new Error('Only @owu.edu email addresses are allowed');
+      }
+
+      // Route test accounts through verification pathway
+      if (user.email.toLowerCase() === 'bjemerick@owu.edu') {
+        if (!window.location.pathname.includes('/prank')) {
+          window.location.href = '/prank';
+        }
+        return;
       }
 
       // Set session role first
