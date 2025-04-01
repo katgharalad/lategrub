@@ -1,31 +1,8 @@
-import { useNavigate } from 'react-router-dom';
-import { Utensils } from 'lucide-react';
+import { Utensils, AlertTriangle } from 'lucide-react';
 import PageLayout from '../components/PageLayout';
-import { useAuth } from '../context/AuthContext';
 import BoomMeter from '../components/BoomMeter';
 
 export default function LandingPage() {
-  const navigate = useNavigate();
-  const { user, setSessionRole } = useAuth();
-
-  const handleCustomerMode = () => {
-    if (user) {
-      setSessionRole('customer');
-      navigate('/customer');
-    } else {
-      navigate('/login', { state: { selectedRole: 'customer' } });
-    }
-  };
-
-  const handleDeliveryMode = () => {
-    if (user) {
-      setSessionRole('delivery');
-      navigate('/delivery');
-    } else {
-      navigate('/login', { state: { selectedRole: 'delivery' } });
-    }
-  };
-
   return (
     <PageLayout showNav={false}>
       {/* Main rotating diamond frame */}
@@ -61,31 +38,22 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex flex-col items-center space-y-4">
-            <button 
-              onClick={handleCustomerMode}
-              className="w-64 bg-gradient-accent text-black font-semibold py-3 px-6 rounded-xl shadow-glow hover:scale-105 transition-all"
-            >
-              {user ? 'Order Food' : 'I Want to Order'}
-            </button>
-
-            <div className="flex items-center w-full gap-4 my-2">
-              <div className="h-[1px] flex-1 bg-primary/30" />
-              <span className="text-text-secondary">or</span>
-              <div className="h-[1px] flex-1 bg-primary/30" />
+          {/* University Policy Violation Message */}
+          <div className="bg-red-500/20 border border-red-500 backdrop-blur-md rounded-xl p-6 max-w-md">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-6 h-6 text-red-500 flex-shrink-0 mt-1" />
+              <div>
+                <h3 className="font-bold text-red-500 text-lg mb-2">University Policy Violation</h3>
+                <p className="text-text-primary">
+                  This service has been determined to violate university policies. Sign-up and login functionality 
+                  has been disabled. Please contact university administration for more information.
+                </p>
+              </div>
             </div>
-
-            <button 
-              onClick={handleDeliveryMode}
-              className="w-64 bg-background-card text-text-primary py-3 px-6 rounded-xl font-medium border border-primary/30 hover:bg-background-dark transition-all"
-            >
-              {user ? 'Switch to Delivery Mode' : 'I Want to Deliver'}
-            </button>
           </div>
 
           {/* Rating Section */}
-          <div className="mt-12 bg-background-card/50 backdrop-blur-md rounded-xl border border-primary/30 p-6 shadow-float">
+          <div className="mt-8 bg-background-card/50 backdrop-blur-md rounded-xl border border-primary/30 p-6 shadow-float">
             <BoomMeter />
           </div>
 

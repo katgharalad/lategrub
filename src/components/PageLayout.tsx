@@ -16,7 +16,6 @@ const PageLayout: React.FC<PageLayoutProps> = ({
   title
 }) => {
   const location = useLocation();
-  const isAuthPage = ['/login', '/signup'].includes(location.pathname);
   const isLandingPage = location.pathname === '/';
 
   return (
@@ -24,39 +23,37 @@ const PageLayout: React.FC<PageLayoutProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className={`pb-20 ${className}`}>
           {/* Header */}
-          {!isAuthPage && (
-            <header className="py-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  {title ? (
-                    <h1 className="font-display text-2xl font-bold bg-gradient-to-r from-primary-light to-primary bg-clip-text text-transparent">
-                      {title}
-                    </h1>
-                  ) : (
-                    <span className="font-display text-2xl font-bold bg-gradient-to-r from-primary-light to-primary bg-clip-text text-transparent">
-                      LateGrub
-                    </span>
-                  )}
-                </div>
-                {!isLandingPage && (
-                  <img 
-                    src="/owu.png" 
-                    alt="OWU Logo" 
-                    className="h-14 w-19"
-                  />
+          <header className="py-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                {title ? (
+                  <h1 className="font-display text-2xl font-bold bg-gradient-to-r from-primary-light to-primary bg-clip-text text-transparent">
+                    {title}
+                  </h1>
+                ) : (
+                  <span className="font-display text-2xl font-bold bg-gradient-to-r from-primary-light to-primary bg-clip-text text-transparent">
+                    LateGrub
+                  </span>
                 )}
               </div>
-            </header>
-          )}
+              {!isLandingPage && (
+                <img 
+                  src="/owu.png" 
+                  alt="OWU Logo" 
+                  className="h-14 w-19"
+                />
+              )}
+            </div>
+          </header>
 
           {/* Main Content */}
-          <main className={`${isAuthPage ? 'pt-0' : 'pt-6'}`}>
+          <main className="pt-6">
             {children}
           </main>
         </div>
 
         {/* Bottom Navigation */}
-        {showNav && !isAuthPage && <BottomNav />}
+        {showNav && <BottomNav />}
       </div>
     </div>
   );
