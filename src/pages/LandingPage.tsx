@@ -21,15 +21,6 @@ export default function LandingPage() {
 
         {/* Main Content */}
         <div className="relative z-10 flex flex-col items-center space-y-8 px-4">
-          {/* OWU Logo */}
-          <div className="mb-8">
-            <img 
-              src="/owu.png" 
-              alt="OWU Logo" 
-              className="h-40 w-auto object-contain"
-            />
-          </div>
-          
           {/* LateGrub Logo */}
           <div className="bg-background-card/50 backdrop-blur-md rounded-xl border border-primary/30 p-8 shadow-float">
             <div className="flex items-center gap-3">

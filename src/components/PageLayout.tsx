@@ -16,7 +16,6 @@ const PageLayout: React.FC<PageLayoutProps> = ({
   title
 }) => {
   const location = useLocation();
-  const isLandingPage = location.pathname === '/';
 
   return (
     <div className="min-h-screen bg-background-DEFAULT text-text-primary">
@@ -36,13 +35,6 @@ const PageLayout: React.FC<PageLayoutProps> = ({
                   </span>
                 )}
               </div>
-              {!isLandingPage && (
-                <img 
-                  src="/owu.png" 
-                  alt="OWU Logo" 
-                  className="h-14 w-19"
-                />
-              )}
             </div>
           </header>
 
