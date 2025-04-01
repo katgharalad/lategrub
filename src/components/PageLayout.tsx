@@ -1,5 +1,4 @@
 import React from 'react';
-import { useLocation } from 'react-router-dom';
 import BottomNav from './BottomNav';
 
 interface PageLayoutProps {
@@ -15,8 +14,6 @@ const PageLayout: React.FC<PageLayoutProps> = ({
   className = '',
   title
 }) => {
-  const location = useLocation();
-
   return (
     <div className="min-h-screen bg-background-DEFAULT text-text-primary">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
